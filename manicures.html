@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Agnail - Painel Administrativo</title>
+    <link rel="icon" href="assets/logo.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="termos-conteudo.js"></script>
+    <style>
+        :root {
+            --bg: #fdf6f9;
+            --card: #ffffff;
+            --rosa: #e4a5b8;
+            --rosa-escuro: #c47d8f;
+            --rosa-claro: #fbeaef;
+            --lilas: #d5c3e0;
+            --lilas-claro: #f3ecf8;
+            --bege: #f5ece3;
+            --nude: #efe3d8;
+            --verde: #b5d8c3;
+            --verde-escuro: #7dab8e;
+            --vermelho: #e8b4b8;
+            --vermelho-escuro: #c48d92;
+            --texto: #5d4a5c;
+            --texto-claro: #8a7a89;
+            --sombra: 0 4px 20px rgba(180, 150, 170, 0.1);
+            --sombra-lg: 0 12px 40px rgba(180, 150, 170, 0.18);
+            --radius: 20px;
+            --radius-sm: 12px;
+            --radius-xs: 8px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--texto);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            background-image:
+                radial-gradient(ellipse at 20% 20%, rgba(228,165,184,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 60%, rgba(213,195,224,0.06) 0%, transparent 50%);
+            background-attachment: fixed;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 16px 20px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            box-shadow: var(--sombra);
+            flex-wrap: wrap;
+            border: 1px solid rgba(228,165,184,0.1);
+        }
+        .header-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: var(--rosa-claro);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: var(--rosa-escuro);
+            border: 3px solid white;
+            box-shadow: 0 2px 12px rgba(180,150,170,0.2);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .header-logo img { width:100%; height:100%; object-fit:cover; }
+        .header-info h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: var(--texto);
+        }
+        .header-info .slogan {
+            font-size: 0.85rem;
+            color: var(--texto-claro);
+            font-style: italic;
+        }
+
+        /* ========== TABS NO RODAPÉ ========== */
+        .tabs-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 -2px 20px rgba(0,0,0,0.04);
+            border-top: 1px solid rgba(228,165,184,0.15);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 env(safe-area-inset-bottom);
+            z-index: 50;
+            transition: var(--transition);
+        }
+        .tab-btn-bottom {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 4px;
+            border: none;
+            background: transparent;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            font-size: 0.65rem;
+            color: var(--texto-claro);
+            cursor: pointer;
+            transition: var(--transition);
+            touch-action: manipulation;
+            gap: 3px;
+            letter-spacing: 0.2px;
+            position: relative;
+            border-radius: 12px;
+        }
+        .tab-btn-bottom svg {
+            width: 22px;
+            height: 22px;
+            stroke: var(--texto-claro);
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: var(--transition);
+        }
+        .tab-btn-bottom span {
+            line-height: 1;
+        }
+        .tab-btn-bottom.ativo {
+            color: var(--rosa-escuro);
+            font-weight: 700;
+        }
+        .tab-btn-bottom.ativo svg {
+            stroke: var(--rosa-escuro);
+        }
+        .tab-btn-bottom::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 20%;
+            width: 60%;
+            height: 3px;
+            background: var(--rosa);
+            border-radius: 0 0 4px 4px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+        .tab-btn-bottom.ativo::after {
+            opacity: 1;
+        }
+        .tab-btn-bottom:hover:not(.ativo) {
+            color: var(--texto);
+            background: rgba(228,165,184,0.05);
+        }
+        .tab-btn-bottom:hover:not(.ativo) svg {
+            stroke: var(--texto);
+        }
+
+        .tab-content { display: none; animation: fadeSlide 0.35s ease; }
+        .tab-content.ativo { display: block; }
+        @keyframes fadeSlide {
+            from { opacity:0; transform:translateY(12px); }
+            to { opacity:1; transform:translateY(0); }
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 18px 18px;
+            box-shadow: var(--sombra);
+            margin-bottom: 16px;
+            border: 1px solid rgba(228,165,184,0.08);
+        }
+        .card h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 14px;
+            color: var(--texto);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h2 i { color: var(--rosa-escuro); font-size:1rem; }
+
+        .filtro-data {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .filtro-data input,
+        .filtro-data select {
+            padding: 8px 12px;
+            border-radius: 50px;
+            border: 2px solid #e8dfe4;
+            background: #fdfafb;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.85rem;
+            color: var(--texto);
+            outline: none;
+            transition: var(--transition);
+        }
+        .filtro-data input:focus,
+        .filtro-data select:focus {
+            border-color: var(--rosa);
+            box-shadow: 0 0 0 4px rgba(228,165,184,0.1);
+        }
+
+        .lista-agendamentos { display:flex; flex-direction:column; gap:10px; }
+        .agendamento-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid #f0e6ec;
+            background: #fdfafc;
+            transition: var(--transition);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .agendamento-item:hover {
+            box-shadow: 0 4px 16px rgba(180,150,170,0.12);
+            border-color: var(--rosa-claro);
+        }
+        .agendamento-info { flex:1; min-width:160px; cursor:pointer; }
+        .agendamento-info strong { font-size:0.95rem; color:var(--texto); }
+        .agendamento-info .detalhes {
+            font-size:0.8rem;
+            color:var(--texto-claro);
+            margin-top:3px;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size:0.7rem;
+            letter-spacing:0.3px;
+            text-transform:uppercase;
+        }
+        .status-agendado { background:#e8f0fe; color:#4a6fa5; }
+        .status-concluido { background:#e6f4ea; color:#3d6b4a; }
+        .status-cancelado { background:#fce8ea; color:#a54a5a; }
+
+        .acoes { display:flex; gap:6px; flex-wrap:wrap; }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            font-size:0.8rem;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            letter-spacing:0.2px;
+            touch-action: manipulation;
+        }
+        .btn-sm { padding:5px 12px; font-size:0.75rem; }
+        .btn-rosa { background:var(--rosa); color:white; box-shadow:0 4px 12px rgba(196,125,143,0.3); }
+        .btn-rosa:hover { background:#d593a6; transform:translateY(-2px); }
+        .btn-verde { background:var(--verde); color:#3d6b4a; }
+        .btn-verde:hover { background:#a3ccb2; transform:translateY(-2px); }
+        .btn-vermelho { background:var(--vermelho); color:#a54a5a; }
+        .btn-vermelho:hover { background:#d9a3a8; transform:translateY(-2px); }
+        .btn-outline { background:white; border:2px solid var(--rosa); color:var(--rosa-escuro); }
+        .btn-outline:hover { background:var(--rosa-claro); }
+
+        .resumo-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+            gap:10px;
+            margin-bottom:16px;
+        }
+        .resumo-card {
+            background:var(--card);
+            border-radius:var(--radius-sm);
+            padding:14px;
+            text-align:center;
+            box-shadow:var(--sombra);
+            border:1px solid rgba(228,165,184,0.08);
+        }
+        .resumo-card .valor {
+            font-size:1.5rem;
+            font-weight:700;
+            color:var(--rosa-escuro);
+            font-family:'Playfair Display',serif;
+        }
+        .resumo-card .label { font-size:0.7rem; color:var(--texto-claro); text-transform:uppercase; letter-spacing:0.5px; }
+
+        .lista-financeiro { display:flex; flex-direction:column; gap:6px; }
+        .financeiro-item {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:8px 12px;
+            border-radius:var(--radius-xs);
+            background:#fdfafc;
+            border:1px solid #f0e6ec;
+            font-size:0.85rem;
+        }
+
+        .config-section { margin-bottom:18px; }
+        .config-section h3 {
+            font-weight:600;
+            font-size:0.95rem;
+            color:var(--texto);
+            margin-bottom:8px;
+            display:flex;
+            align-items:center;
+            gap:6px;
+        }
+        .input-group {
+            display:flex;
+            gap:6px;
+            align-items:center;
+            flex-wrap:wrap;
+            margin-bottom:6px;
+        }
+        .input-group input,
+        .input-group select {
+            flex:1 1 auto;
+            padding:8px 12px;
+            border-radius:50px;
+            border:2px solid #e8dfe4;
+            background:#fdfafb;
+            font-family:'Nunito',sans-serif;
+            font-size:0.85rem;
+            color:var(--texto);
+            outline:none;
+            min-width:100px;
+        }
+        .input-group input:focus,
+        .input-group select:focus {
+            border-color:var(--rosa);
+            box-shadow:0 0 0 4px rgba(228,165,184,0.1);
+        }
+
+        .servico-lista,
+        .pagamento-lista {
+            display:flex;
+            flex-direction:column;
+            gap:4px;
+        }
+        .servico-item,
+        .pagamento-item {
+            display:flex;
+            align-items:center;
+            gap:6px;
+            background:#fdfafc;
+            padding:6px 10px;
+            border-radius:50px;
+            border:1px solid #f0e6ec;
+            font-size:0.85rem;
+        }
+        .servico-item span,
+        .pagamento-item span { flex:1; }
+
+        .btn-icon {
+            width:30px; height:30px;
+            border-radius:50%;
+            border:none;
+            background:transparent;
+            cursor:pointer;
+            color:var(--texto-claro);
+            transition:var(--transition);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            touch-action:manipulation;
+        }
+        .btn-icon:hover { background:var(--rosa-claro); color:var(--rosa-escuro); }
+
+        /* ===== OVERLAY E MODAL ===== */
+        .overlay {
+            position:fixed;
+            top:0; left:0; width:100%; height:100%;
+            background:rgba(80,50,60,0.35);
+            z-index:100;
+            display:none;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+            backdrop-filter:blur(3px);
+            -webkit-backdrop-filter:blur(3px);
+        }
+        .overlay.active { display:flex; }
+
+        /* Bloqueia interação e rolagem do conteúdo de fundo enquanto um modal está aberto */
+        body.agnail-modal-aberto {
+            overflow: hidden;
+        }
+        body.agnail-modal-aberto > *:not(.overlay) {
+            pointer-events: none;
+            user-select: none;
+        }
+        body.agnail-modal-aberto > .overlay {
+            pointer-events: auto;
+            user-select: auto;
+        }
+        .modal {
+            background:var(--card);
+            border-radius:var(--radius);
+            padding:24px 20px;
+            width:100%;
+            max-width:480px;
+            box-shadow:var(--sombra-lg);
+            position:relative;
+            animation:slideUp 0.35s cubic-bezier(0.22,0.61,0.36,1);
+            max-height:85vh;
+            overflow-y:auto;
+            border:1px solid rgba(228,165,184,0.1);
+        }
+        @keyframes slideUp {
+            from { opacity:0; transform:translateY(40px); }
+            to { opacity:1; transform:translateY(0); }
+        }
+        .modal-fechar {
+            position:absolute;
+            top:10px; right:12px;
+            width:34px; height:34px;
+            border-radius:50%;
+            border:none;
+            background:var(--rosa-claro);
+            color:var(--rosa-escuro);
+            cursor:pointer;
+            font-size:1rem;
+            transition:var(--transition);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .modal-fechar:hover { background:var(--rosa); color:white; }
+        .modal h3 {
+            font-family:'Playfair Display',serif;
+            font-size:1.3rem;
+            margin-bottom:8px;
+            text-align:center;
+            color:var(--texto);
+        }
+        .modal p.sub {
+            text-align:center;
+            color:var(--texto-claro);
+            font-size:0.9rem;
+            margin-bottom:20px;
+        }
+
+        /* ===== TOAST NO TOPO ===== */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #3d3d3d;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            z-index: 9999;
+            transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            max-width: 90%;
+            text-align: center;
+            pointer-events: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.sucesso {
+            background: #7dab8e;
+        }
+        .toast.erro {
+            background: #c48d92;
+        }
+
+        .checkbox-group {
+            display:flex;
+            flex-wrap:wrap;
+            gap:12px;
+            align-items:center;
+            margin-bottom:8px;
+        }
+        .checkbox-group label {
+            display:flex;
+            align-items:center;
+            gap:4px;
+            font-size:0.85rem;
+            font-weight:500;
+            cursor:pointer;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width:18px; height:18px;
+            accent-color:var(--rosa);
+            cursor:pointer;
+        }
+        .checkbox-group-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: repeat(4, auto);
+            grid-auto-flow: column;
+            gap: 10px 16px;
+            margin-bottom: 8px;
+        }
+        .checkbox-group-2col label {
+            display:flex;
+            align-items:center;
+            gap:6px;
+            font-size:0.85rem;
+            font-weight:500;
+            cursor:pointer;
+        }
+        .checkbox-group-2col input[type="checkbox"] {
+            width:18px; height:18px;
+            accent-color:var(--rosa);
+            cursor:pointer;
+            flex-shrink: 0;
+        }
+
+        /* Temas */
+        .temas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 12px;
+            margin: 8px 0;
+        }
+        .tema-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            background: var(--card);
+            border-radius: var(--radius-sm);
+            padding: 10px 6px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--sombra);
+        }
+        .tema-option:hover {
+            transform: translateY(-2px);
+            border-color: var(--rosa);
+        }
+        .tema-option.selecionado {
+            border-color: var(--rosa-escuro);
+            background: var(--rosa-claro);
+        }
+        .tema-bolinha {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+        .tema-nome {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-align: center;
+            color: var(--texto);
+        }
+
+        .link-compartilhar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .link-compartilhar input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 50px;
+            border: 2px solid #e8dfe4;
+            background: #f5f0f2;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.85rem;
+            color: var(--texto);
+            outline: none;
+            min-width: 200px;
+        }
+        .link-compartilhar input:focus {
+            border-color: var(--rosa);
+        }
+
+        .folgas-lista {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .folga-item {
+            background: var(--rosa-claro);
+            border-radius: 50px;
+            padding: 4px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--rosa-escuro);
+            border: 1px solid var(--rosa);
+        }
+        .folga-item button {
+            background: none;
+            border: none;
+            color: var(--vermelho-escuro);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0 2px;
+        }
+        .folga-item button:hover {
+            transform: scale(1.2);
+        }
+
+        /* Detalhes do agendamento - links */
+        #detalhesConteudo a {
+            color: var(--rosa-escuro);
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 1px dotted var(--rosa-escuro);
+        }
+        #detalhesConteudo a:hover {
+            border-bottom: 2px solid var(--rosa-escuro);
+        }
+
+        @media (max-width:600px) {
+            .container { padding:10px 12px; }
+            .header { padding:12px 14px; gap:10px; }
+            .header-logo { width:50px; height:50px; font-size:22px; }
+            .header-info h1 { font-size:1.2rem; }
+            .tab-btn-bottom { font-size:0.55rem; padding:4px 2px; }
+            .tab-btn-bottom svg { width:20px; height:20px; }
+            .card { padding:14px; }
+            .agendamento-item { flex-direction:column; align-items:flex-start; }
+            .acoes { width:100%; justify-content:flex-end; }
+            .resumo-cards { grid-template-columns:1fr 1fr; }
+            .input-group { flex-direction:column; align-items:stretch; }
+            .input-group input { width:100%; }
+            .checkbox-group { justify-content:center; }
+            .temas-grid { grid-template-columns: repeat(4, 1fr); }
+            .link-compartilhar input { min-width: 120px; }
+            .toast { 
+                top: 10px;
+                font-size: 0.75rem; 
+                padding: 10px 18px; 
+                white-space: normal;
+                max-width: 92%;
+            }
+            .modal { padding:18px 14px; max-width:100%; }
+        }
+    </style>
+    <style>
+        body.agnail-carregando > .container,
+        body.agnail-carregando > .tabs-bottom { display: none !important; }
+        #agnailAuthGate {
+            position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center;
+            justify-content: center; flex-direction: column; z-index: 999; gap: 12px;
+        }
+        #agnailAuthGate .spinner {
+            width: 26px; height: 26px; border: 3px solid var(--rosa-claro); border-top-color: var(--rosa-escuro);
+            border-radius: 50%; animation: agnailGirar 0.8s linear infinite;
+        }
+        @keyframes agnailGirar { to { transform: rotate(360deg); } }
+        #agnailAuthGate p { color: var(--texto-claro); font-size: 0.85rem; }
+    </style>
+</head>
+<body class="agnail-carregando">
+
+<div id="agnailAuthGate">
+    <span class="spinner"></span>
+    <p>Verificando acesso...</p>
+</div>
+
+<!-- Termos de Uso e Política de Privacidade (bloqueia acesso até aceitar) -->
+<div class="overlay" id="overlayTermos" style="z-index:400;">
+    <div class="modal" style="max-width:520px;">
+        <div id="conteudoTermos" style="font-size:0.86rem; line-height:1.6; color:var(--texto); max-height:52vh; overflow-y:auto; padding-right:4px;"></div>
+        <label style="display:flex; align-items:flex-start; gap:8px; margin-top:16px; font-size:0.85rem; cursor:pointer;">
+            <input type="checkbox" id="checkAceiteTermos" style="margin-top:3px;">
+            <span>Li e aceito os Termos de Uso e a Política de Privacidade.</span>
+        </label>
+        <button class="btn btn-rosa" id="btnAceitarTermos" style="width:100%; margin-top:14px;" disabled>Continuar</button>
+    </div>
+</div>
+
+<!-- Editar Logo, Nome e Slogan -->
+<div class="overlay" id="overlayEditarPerfil">
+    <div class="modal" style="max-width:420px;">
+        <button class="modal-fechar" id="fecharEditarPerfil"><i class="fa-solid fa-xmark"></i></button>
+        <h3 style="margin-bottom:14px;"><i class="fa-solid fa-store"></i> Logo, Nome e Slogan</h3>
+
+        <div class="config-section">
+            <h3 style="font-size:0.9rem;"><i class="fa-solid fa-image"></i> Logo da Empresa</h3>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <input type="file" id="inputLogo" accept="image/*" style="display:none;">
+                <button class="btn btn-outline btn-sm" id="btnUploadLogo" type="button">Escolher imagem</button>
+                <button class="btn btn-outline btn-sm" id="btnRemoverLogo" type="button">Remover logo</button>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h3 style="font-size:0.9rem;"><i class="fa-solid fa-signature"></i> Nome</h3>
+            <input type="text" id="configNome" placeholder="Ex: Studio da Ana" maxlength="50" style="width:100%; padding:10px 14px; border-radius:50px; border:2px solid #e8dfe4;">
+        </div>
+
+        <div class="config-section">
+            <h3 style="font-size:0.9rem;"><i class="fa-solid fa-quote-right"></i> Slogan</h3>
+            <input type="text" id="configSlogan" placeholder="Ex: Cuidando das suas unhas com carinho" maxlength="50" style="width:100%; padding:10px 14px; border-radius:50px; border:2px solid #e8dfe4;">
+        </div>
+
+        <p style="font-size:0.75rem; color:var(--texto-claro); text-align:center; margin-top:6px;">As alterações são salvas automaticamente.</p>
+    </div>
+</div>
+
+<!-- Adicionar Serviço -->
+<div class="overlay" id="overlayAddServico">
+    <div class="modal" style="max-width:380px;">
+        <button class="modal-fechar" id="fecharAddServico"><i class="fa-solid fa-xmark"></i></button>
+        <h3 style="margin-bottom:14px;"><i class="fa-solid fa-spa"></i> Adicionar Serviço</h3>
+        <form id="formAddServico">
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:5px;">Nome do serviço</label>
+                <input type="text" id="novoServicoNome" placeholder="Ex: Manicure Simples" maxlength="50" required style="width:100%; padding:10px 14px; border-radius:50px; border:2px solid #e8dfe4;">
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:14px;">
+                <div style="flex:1;">
+                    <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:5px;">Valor (R$)</label>
+                    <input type="number" id="novoServicoValor" placeholder="Ex: 30" step="0.01" min="0" required style="width:100%; padding:10px 14px; border-radius:50px; border:2px solid #e8dfe4;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:5px;">Duração (min)</label>
+                    <input type="number" id="novoServicoDuracao" placeholder="Ex: 30" step="5" min="5" required style="width:100%; padding:10px 14px; border-radius:50px; border:2px solid #e8dfe4;">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-rosa" style="width:100%;">Adicionar</button>
+        </form>
+    </div>
+</div>
+
+<!-- Formulário de cadastro no primeiro acesso -->
+<!-- Modal de configuração inicial -->
+<div class="overlay" id="overlayConfigInicial" style="display:none; align-items:center; justify-content:center; z-index:300;">
+    <div class="modal" style="max-width:500px; max-height:90vh; overflow-y:auto; padding:28px 24px;">
+        <div style="text-align:center; margin-bottom:16px;">
+            <div style="font-size:3.5rem; color:var(--rosa-escuro); margin-bottom:6px;">💅</div>
+            <h3 style="font-family:'Playfair Display',serif; font-size:1.6rem; color:var(--texto); margin-bottom:4px;">Bem-vinda ao Agnail!</h3>
+            <p class="sub" style="color:var(--texto-claro); font-size:0.95rem;">Configure seu estúdio para começar a receber agendamentos.</p>
+        </div>
+
+        <form id="formConfigInicial">
+            <div style="display:grid; gap:14px;">
+                <div class="form-group">
+                    <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-solid fa-image"></i> Foto de Perfil (opcional)</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <input type="file" id="configLogoInicial" accept="image/*" style="display:none;">
+                        <button type="button" class="btn btn-outline btn-sm" id="btnUploadLogoInicial">Escolher imagem</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="btnRemoverLogoInicial">Remover foto</button>
+                        <div id="previewLogoInicial" style="width:60px; height:60px; border-radius:50%; overflow:hidden; border:2px solid var(--rosa); display:none; flex-shrink:0;">
+                            <img id="previewLogoImg" src="" alt="Foto de perfil" style="width:100%;height:100%;object-fit:cover;">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-solid fa-quote-right"></i> Slogan (opcional)</label>
+                    <input type="text" id="configSloganInicial" placeholder="Ex: Cuidando das suas unhas com carinho" maxlength="50" style="width:100%; padding:12px 14px; border-radius:var(--radius-xs); border:2px solid #e8dfe4; background:#fdfafb; font-size:0.95rem;">
+                </div>
+                <div class="form-group">
+                    <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-brands fa-whatsapp"></i> Número de WhatsApp *</label>
+                    <input type="tel" id="configWhatsappInicial" placeholder="(11) 99999-9999" maxlength="15" required style="width:100%; padding:12px 14px; border-radius:var(--radius-xs); border:2px solid #e8dfe4; background:#fdfafb; font-size:0.95rem;">
+                </div>
+
+                <!-- Serviços -->
+                <div class="form-group">
+                    <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-solid fa-spa"></i> Serviços oferecidos * (adicione pelo menos um)</label>
+                    <div id="servicosIniciaisLista" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;"></div>
+                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                        <input type="text" id="novoServicoNomeInicial" placeholder="Ex: Manicure Simples" maxlength="50" style="flex:2; padding:8px 12px; border-radius:50px; border:2px solid #e8dfe4; background:#fdfafb; font-size:0.9rem;">
+                        <input type="number" id="novoServicoValorInicial" placeholder="Ex: 30" step="0.01" min="0" style="flex:1; padding:8px 12px; border-radius:50px; border:2px solid #e8dfe4; background:#fdfafb; font-size:0.9rem;">
+                        <input type="number" id="novoServicoDuracaoInicial" placeholder="Ex: 30" step="5" min="5" style="flex:1; padding:8px 12px; border-radius:50px; border:2px solid #e8dfe4; background:#fdfafb; font-size:0.9rem;">
+                        <button type="button" class="btn btn-rosa btn-sm" id="btnAddServicoInicial">+</button>
+                    </div>
+                </div>
+
+                <!-- Formas de pagamento (fixas) -->
+                <div class="form-group">
+                    <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-solid fa-credit-card"></i> Formas de pagamento * (escolha pelo menos uma)</label>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <label><input type="checkbox" class="pagamento-inicial-cb" value="Pix"> Pix</label>
+                        <label><input type="checkbox" class="pagamento-inicial-cb" value="Dinheiro"> Dinheiro</label>
+                        <label><input type="checkbox" class="pagamento-inicial-cb" value="Cartão"> Cartão</label>
+                    </div>
+                </div>
+
+                <!-- Horário -->
+                <div class="form-group">
+                    <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-solid fa-clock"></i> Horário de atendimento *</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;">Início: <input type="time" id="configHoraInicioInicial" required style="padding:6px 10px; border-radius:50px; border:2px solid #e8dfe4;"></label>
+                        <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;">Fim: <input type="time" id="configHoraFimInicial" required style="padding:6px 10px; border-radius:50px; border:2px solid #e8dfe4;"></label>
+                        <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;">Intervalo (min): <input type="number" id="configIntervaloInicial" placeholder="Ex: 60" step="15" min="30" style="width:80px; padding:6px 10px; border-radius:50px; border:2px solid #e8dfe4;"></label>
+                    </div>
+                </div>
+
+                <!-- Dias de folga fixos -->
+                <div class="form-group">
+                    <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-solid fa-calendar-week"></i> Dias de folga fixos</label>
+                    <div class="checkbox-group-2col">
+                        <label><input type="checkbox" value="0"> Dom</label>
+                        <label><input type="checkbox" value="1"> Seg</label>
+                        <label><input type="checkbox" value="2"> Ter</label>
+                        <label><input type="checkbox" value="3"> Qua</label>
+                        <label><input type="checkbox" value="4"> Qui</label>
+                        <label><input type="checkbox" value="5"> Sex</label>
+                        <label><input type="checkbox" value="6"> Sáb</label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-rosa" style="margin-top:20px; width:100%; padding:14px; font-size:1rem; box-shadow:0 4px 16px rgba(196,125,143,0.4);">
+                <i class="fa-solid fa-check"></i> Salvar e começar
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="container">
+    <div class="header">
+        <div class="header-clicavel" id="headerPainelClicavel" style="display:flex; align-items:center; gap:14px; cursor:pointer; flex:1;" title="Editar logo, nome e slogan">
+            <div class="header-logo" id="painelLogo"><i class="fa-solid fa-spa"></i></div>
+            <div class="header-info">
+                <h1 id="painelNome">Agnail</h1>
+                <p class="slogan" id="painelSlogan">Agendamento inteligente</p>
+            </div>
+        </div>
+        <button id="btnSairPainel" title="Sair" style="margin-left:auto; background:none; border:none; color:var(--texto-claro); font-size:1.1rem; cursor:pointer; padding:8px;">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+    </div>
+
+    <!-- Conteúdo das abas -->
+    <div class="tab-content ativo" id="tab-agendamentos">
+        <div class="card">
+            <h2><i class="fa-solid fa-list-check"></i> Agendamentos</h2>
+            <div class="filtro-data">
+                <label style="font-weight:600;font-size:0.85rem;">Filtrar por data:</label>
+                <input type="date" id="filtroDataAgenda">
+                <button class="btn btn-outline btn-sm" id="limparFiltroAgenda">Limpar</button>
+            </div>
+            <div class="lista-agendamentos" id="listaAgendamentos">
+                <p style="color:var(--texto-claro);text-align:center;">Nenhum agendamento encontrado.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" id="tab-financeiro">
+        <div class="resumo-cards" id="resumoFinanceiro"></div>
+        <div class="card">
+            <h2><i class="fa-solid fa-receipt"></i> Transações</h2>
+            <div class="filtro-data" style="margin-bottom:10px;">
+                <input type="date" id="filtroInicio" placeholder="Início">
+                <input type="date" id="filtroFim" placeholder="Fim">
+                <button class="btn btn-outline btn-sm" id="aplicarFiltroFinanceiro">Filtrar</button>
+                <button class="btn btn-outline btn-sm" id="limparFiltroFinanceiro">Limpar</button>
+            </div>
+            <div class="lista-financeiro" id="listaFinanceiro">
+                <p style="color:var(--texto-claro);text-align:center;">Nenhuma transação no período.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" id="tab-configuracoes">
+        <div class="card">
+            <h2><i class="fa-solid fa-sliders"></i> Configurações Gerais</h2>
+
+            <div class="config-section">
+                <h3><i class="fa-brands fa-whatsapp"></i> WhatsApp para notificações</h3>
+                <input type="text" id="configWhatsapp" placeholder="(11) 99999-9999" maxlength="15" style="width:100%;padding:8px 14px;border-radius:50px;border:2px solid #e8dfe4;">
+            </div>
+
+            <div class="config-section">
+                <h3><i class="fa-solid fa-spa"></i> Serviços oferecidos</h3>
+                <div class="servico-lista" id="servicosConfigLista"></div>
+                <button class="btn btn-rosa btn-sm" id="btnAbrirModalServico" type="button" style="margin-top:8px;"><i class="fa-solid fa-plus"></i> Adicionar Serviço</button>
+            </div>
+
+            <!-- Formas de pagamento - checkboxes de ativação -->
+            <div class="config-section">
+                <h3><i class="fa-solid fa-credit-card"></i> Formas de pagamento</h3>
+                <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                    <label><input type="checkbox" class="pagamento-config-cb" value="Pix"> Pix</label>
+                    <label><input type="checkbox" class="pagamento-config-cb" value="Dinheiro"> Dinheiro</label>
+                    <label><input type="checkbox" class="pagamento-config-cb" value="Cartão"> Cartão</label>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3><i class="fa-solid fa-clock"></i> Horário de atendimento</h3>
+                <div class="input-group">
+                    <label>Início:</label>
+                    <input type="time" id="configHoraInicio">
+                    <label>Fim:</label>
+                    <input type="time" id="configHoraFim">
+                    <label>Intervalo (min):</label>
+                    <input type="number" id="configIntervalo" min="30" max="180" step="15" style="width:80px;">
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3><i class="fa-solid fa-ban"></i> Dias de folga fixos</h3>
+                <div class="checkbox-group-2col" id="diasFolgaConfig">
+                    <label><input type="checkbox" value="0"> Domingo</label>
+                    <label><input type="checkbox" value="1"> Segunda</label>
+                    <label><input type="checkbox" value="2"> Terça</label>
+                    <label><input type="checkbox" value="3"> Quarta</label>
+                    <label><input type="checkbox" value="4"> Quinta</label>
+                    <label><input type="checkbox" value="5"> Sexta</label>
+                    <label><input type="checkbox" value="6"> Sábado</label>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3><i class="fa-solid fa-calendar-day"></i> Dias de folga específicos</h3>
+                <div class="input-group">
+                    <input type="date" id="inputNovaFolga">
+                    <button class="btn btn-rosa btn-sm" id="btnAddFolga">Adicionar</button>
+                </div>
+                <div class="folgas-lista" id="listaFolgas"></div>
+            </div>
+
+            <div class="config-section">
+                <h3><i class="fa-solid fa-palette"></i> Tema do Painel</h3>
+                <div class="temas-grid" id="temasGrid"></div>
+            </div>
+
+            <div class="config-section">
+                <h3><i class="fa-solid fa-share-alt"></i> Link do Painel de Agendamento</h3>
+                <div class="link-compartilhar">
+                    <input type="text" id="linkCompartilhar" readonly>
+                    <button class="btn btn-rosa btn-sm" id="btnCopiarLink"><i class="fa-regular fa-copy"></i> Copiar</button>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3><i class="fa-solid fa-xmark-circle"></i> Cancelar agendamento futuro</h3>
+                <select id="selectCancelarAgendamento" style="width:100%;padding:8px 14px;border-radius:50px;border:2px solid #e8dfe4;">
+                    <option value="">Selecione um agendamento...</option>
+                </select>
+                <button class="btn btn-vermelho btn-sm" id="btnCancelarAgendamento" style="margin-top:8px;">Cancelar Agendamento</button>
+            </div>
+
+            <div class="config-section" style="margin-top:20px;">
+                <h3><i class="fa-solid fa-file-contract"></i> Termos e Privacidade</h3>
+                <button class="btn btn-rosa btn-sm" id="btnConsultarTermos" type="button">Ver Termos e Privacidade</button>
+            </div>
+
+            <div class="config-section" style="margin-top:20px; border:1px solid #f0d5da;">
+                <h3 style="color:var(--vermelho-escuro);"><i class="fa-solid fa-triangle-exclamation"></i> Zona de Risco</h3>
+                <button class="btn btn-vermelho btn-sm" id="btnExcluirConta">Excluir minha conta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== TABS NO RODAPÉ ========== -->
+<div class="tabs-bottom" id="tabsBottom">
+    <button class="tab-btn-bottom ativo" data-tab="agendamentos">
+        <svg viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span>Agendamentos</span>
+    </button>
+    <button class="tab-btn-bottom" data-tab="financeiro">
+        <svg viewBox="0 0 24 24">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <span>Financeiro</span>
+    </button>
+    <button class="tab-btn-bottom" data-tab="configuracoes">
+        <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <span>Configurações</span>
+    </button>
+</div>
+
+<!-- Modal Ação -->
+<div class="overlay" id="overlayAcao">
+    <div class="modal" id="modalAcao">
+        <button class="modal-fechar" id="fecharAcao"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="tituloAcao"></h3>
+        <div id="conteudoAcao"></div>
+    </div>
+</div>
+
+<!-- NOVO MODAL DE DETALHES -->
+<div class="overlay" id="overlayDetalhes">
+    <div class="modal" id="modalDetalhes">
+        <button class="modal-fechar" id="fecharDetalhes"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="detalhesTitulo">Detalhes do Agendamento</h3>
+        <div id="detalhesConteudo" style="margin-top:12px; display:grid; gap:8px; font-size:0.95rem;">
+            <!-- preenchido via JS -->
+        </div>
+        <button class="btn btn-outline" id="btnFecharDetalhes" style="margin-top:16px; width:100%;">Fechar</button>
+    </div>
+</div>
+
+<div class="toast" id="toastPainel"></div>
+
+<script>
+    // ============ BLOQUEIO DE FUNDO QUANDO UM MODAL ESTÁ ABERTO ============
+    // Observa todos os elementos .overlay (inclusive os que abrem antes do
+    // login terminar, como Termos e Cadastro Inicial) e, sempre que algum
+    // estiver visível, desativa cliques/toques no conteúdo por trás e trava
+    // a rolagem da página.
+    (function agnailInicializarBloqueioFundo() {
+        function overlayEstaAberta(ov) {
+            if (ov.classList.contains('active')) return true;
+            const display = ov.style.display || getComputedStyle(ov).display;
+            return display && display !== 'none';
+        }
+        function atualizar() {
+            const algumaAberta = Array.from(document.querySelectorAll('.overlay')).some(overlayEstaAberta);
+            document.body.classList.toggle('agnail-modal-aberto', algumaAberta);
+        }
+        const observer = new MutationObserver(atualizar);
+        function observarTodas() {
+            document.querySelectorAll('.overlay').forEach(ov => {
+                observer.observe(ov, { attributes: true, attributeFilter: ['class', 'style'] });
+            });
+        }
+        observarTodas();
+        // Novos overlays podem ser adicionados dinamicamente ao body
+        new MutationObserver(() => { observarTodas(); atualizar(); })
+            .observe(document.body, { childList: true });
+        atualizar();
+    })();
+
+    (async function() {
+        // ============ AUTENTICAÇÃO E CONTROLE DE ACESSO ============
+        const usuarioAtual = await new Promise((resolve) => {
+            Agnail.onAuthChange((user) => resolve(user));
+        });
+
+        if (!usuarioAtual) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        let assinaturaAtual = await Agnail.getAssinatura(usuarioAtual.uid);
+        if (!assinaturaAtual) {
+            // usuário autenticado mas sem estrutura (não deveria acontecer se passou pelo login.html)
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const statusAcessoAtual = Agnail.calcularStatusAcesso(assinaturaAtual);
+        if (!statusAcessoAtual.acessoLiberado) {
+            window.location.href = 'cobranca.html';
+            return;
+        }
+
+        // Atualiza último login
+        Agnail.db.collection('usuarios').doc(usuarioAtual.uid).set({
+            ultimoLogin: firebase.firestore.Timestamp.now()
+        }, { merge: true }).catch(() => {});
+
+        const manicureRef = Agnail.manicureRef(usuarioAtual.uid);
+
+        // Estas funções e listeners do modal de cadastro inicial precisam
+        // estar prontos ANTES do "await aguardarCadastroInicial(...)" logo
+        // abaixo, já que a Promise só resolve quando a manicure interage
+        // com os botões deste modal (adicionar serviço, enviar foto etc.).
+        function exibirModalConfiguracaoInicial() {
+            const overlay = document.getElementById('overlayConfigInicial');
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+
+            document.getElementById('configSloganInicial').value = '';
+            document.getElementById('configWhatsappInicial').value = '';
+            document.getElementById('configHoraInicioInicial').value = '';
+            document.getElementById('configHoraFimInicial').value = '';
+            document.getElementById('configIntervaloInicial').value = '';
+            Agnail.aplicarMascaraCelular(document.getElementById('configWhatsappInicial'));
+
+            // Limpar foto
+            document.getElementById('previewLogoImg').src = '';
+            document.getElementById('previewLogoInicial').style.display = 'none';
+            document.getElementById('configLogoInicial').value = '';
+            window._logoInicial = '';
+
+            renderizarServicosIniciais([]);
+
+            document.querySelectorAll('.pagamento-inicial-cb').forEach(cb => { cb.checked = false; });
+            document.querySelectorAll('#overlayConfigInicial .checkbox-group-2col input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        }
+
+        function renderizarServicosIniciais(servicos) {
+            const container = document.getElementById('servicosIniciaisLista');
+            container.innerHTML = servicos.map((s, i) => `
+                <span class="servico-tag" style="background:var(--rosa-claro); border-radius:50px; padding:2px 10px; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem; border:1px solid var(--rosa);">
+                    ${s.nome} - R$ ${s.valor.toFixed(2)} (${s.duracao}min)
+                    <button onclick="window.removerServicoInicial(${i})" style="background:none; border:none; color:var(--vermelho-escuro); cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+            `).join('');
+            window._servicosIniciais = servicos;
+        }
+        window.removerServicoInicial = function(i) {
+            const servicos = window._servicosIniciais || [];
+            servicos.splice(i, 1);
+            renderizarServicosIniciais(servicos);
+        };
+        document.getElementById('btnAddServicoInicial').addEventListener('click', function() {
+            const nome = document.getElementById('novoServicoNomeInicial').value.trim();
+            const valor = parseFloat(document.getElementById('novoServicoValorInicial').value);
+            const duracao = parseInt(document.getElementById('novoServicoDuracaoInicial').value) || 30;
+            if (nome && !isNaN(valor) && valor >= 0) {
+                const servicos = window._servicosIniciais || [];
+                servicos.push({ nome, valor, duracao });
+                renderizarServicosIniciais(servicos);
+                document.getElementById('novoServicoNomeInicial').value = '';
+                document.getElementById('novoServicoValorInicial').value = '';
+                document.getElementById('novoServicoDuracaoInicial').value = '';
+            }
+        });
+
+        // Foto de perfil no modal inicial
+        document.getElementById('btnUploadLogoInicial').addEventListener('click', function() {
+            document.getElementById('configLogoInicial').click();
+        });
+        document.getElementById('configLogoInicial').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const imgData = await Agnail.processarImagem(file);
+                document.getElementById('previewLogoImg').src = imgData;
+                document.getElementById('previewLogoInicial').style.display = 'block';
+                window._logoInicial = imgData;
+            }
+        });
+        document.getElementById('btnRemoverLogoInicial').addEventListener('click', function() {
+            document.getElementById('previewLogoImg').src = '';
+            document.getElementById('previewLogoInicial').style.display = 'none';
+            window._logoInicial = '';
+            document.getElementById('configLogoInicial').value = '';
+        });
+
+        // ============ TERMOS DE USO / POLÍTICA DE PRIVACIDADE + CADASTRO INICIAL ============
+        // Libera o spinner de "verificando acesso" (mas mantém o painel
+        // principal escondido) para que os modais de onboarding apareçam.
+        const gateInicial = document.getElementById('agnailAuthGate');
+        if (gateInicial) gateInicial.remove();
+
+        function aguardarAceiteTermos(perfil) {
+            return new Promise((resolve) => {
+                if (perfil && perfil.termosAceitos) { resolve(); return; }
+                document.getElementById('conteudoTermos').innerHTML = window.AGNAIL_TERMOS_HTML || '';
+                const overlay = document.getElementById('overlayTermos');
+                const check = document.getElementById('checkAceiteTermos');
+                const btn = document.getElementById('btnAceitarTermos');
+                overlay.classList.add('active');
+                check.checked = false;
+                btn.disabled = true;
+                check.onchange = () => { btn.disabled = !check.checked; };
+                btn.onclick = async () => {
+                    btn.disabled = true;
+                    btn.textContent = 'Salvando...';
+                    await manicureRef.collection('meta').doc('perfil').set({
+                        termosAceitos: true,
+                        termosAceitosEm: firebase.firestore.Timestamp.now()
+                    }, { merge: true });
+                    overlay.classList.remove('active');
+                    resolve();
+                };
+            });
+        }
+
+        const perfilAtual = await Agnail.getPerfil(usuarioAtual.uid);
+        await aguardarAceiteTermos(perfilAtual);
+        await aguardarCadastroInicial(perfilAtual);
+
+        // ============ CACHE LOCAL (SINCRONIZADO COM O FIRESTORE) ============
+        // Carrega perfil/configurações/agendamentos/financeiro uma vez, e mantém
+        // um cache em memória para que o restante do app (que espera chamadas
+        // síncronas como getConfig()/getAgendamentos()) continue funcionando.
+        async function carregarColecao(nome) {
+            const snap = await manicureRef.collection(nome).get();
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        const [configuracoesDoc, agendamentosArr, financeiroArr] = await Promise.all([
+            Agnail.getConfiguracoes(usuarioAtual.uid),
+            carregarColecao('agendamentos'),
+            carregarColecao('financeiro')
+        ]);
+
+        window._agnailCache = {
+            config: configuracoesDoc,
+            agendamentos: agendamentosArr,
+            financeiro: financeiroArr
+        };
+
+        // Libera a tela (revela o painel principal)
+        document.body.classList.remove('agnail-carregando');
+
+        // ============ MONITORAMENTO DE EXPIRAÇÃO DO PLANO ============
+        // Redireciona automaticamente para a cobrança assim que o acesso
+        // deixar de ser válido — seja por ação do admin (bloqueio) ou pela
+        // simples passagem do tempo (fim do teste grátis / vencimento).
+        let _assinaturaObservada = assinaturaAtual;
+        manicureRef.collection('meta').doc('assinatura').onSnapshot((doc) => {
+            if (!doc.exists) return;
+            _assinaturaObservada = doc.data();
+            if (!Agnail.calcularStatusAcesso(_assinaturaObservada).acessoLiberado) {
+                window.location.href = 'cobranca.html';
+            }
+        });
+        setInterval(() => {
+            if (!Agnail.calcularStatusAcesso(_assinaturaObservada).acessoLiberado) {
+                window.location.href = 'cobranca.html';
+            }
+        }, 60000);
+
+        // ============ CONFIGURAÇÕES E DADOS ============
+        const TEMA_CACHE_KEY = 'agnail_tema_cache'; // apenas cache local rápido; a fonte de verdade é o Firestore
+
+        // ============ TEMAS ============
+        const TEMAS = [
+            { id: 'rosa', nome: 'Rosa Clássico', cores: { bg: '#fdf6f9', card: '#ffffff', rosa: '#e4a5b8', rosaEscuro: '#c47d8f', rosaClaro: '#fbeaef', lilas: '#d5c3e0', lilasClaro: '#f3ecf8', bege: '#f5ece3', nude: '#efe3d8', verde: '#b5d8c3', verdeEscuro: '#7dab8e', vermelho: '#e8b4b8', vermelhoEscuro: '#c48d92', texto: '#5d4a5c', textoClaro: '#8a7a89' } },
+            { id: 'lilas', nome: 'Lilás Suave', cores: { bg: '#f8f5fc', card: '#ffffff', rosa: '#d5c3e0', rosaEscuro: '#b89fc9', rosaClaro: '#f3ecf8', lilas: '#c9b8d4', lilasClaro: '#f0eaf5', bege: '#f5f0f0', nude: '#ede6e6', verde: '#b5d8c3', verdeEscuro: '#7dab8e', vermelho: '#e8b4b8', vermelhoEscuro: '#c48d92', texto: '#4a3e4a', textoClaro: '#7a6e7a' } },
+            { id: 'menta', nome: 'Menta Fresca', cores: { bg: '#f2faf5', card: '#ffffff', rosa: '#b5d8c3', rosaEscuro: '#7dab8e', rosaClaro: '#eaf7ef', lilas: '#c9d8d0', lilasClaro: '#e8f2ec', bege: '#f5ece3', nude: '#efe3d8', verde: '#b5d8c3', verdeEscuro: '#3d6b4a', vermelho: '#e8b4b8', vermelhoEscuro: '#c48d92', texto: '#2d4a3a', textoClaro: '#5a7a6a' } },
+            { id: 'azul', nome: 'Azul Céu', cores: { bg: '#f2f8fc', card: '#ffffff', rosa: '#a8c8e0', rosaEscuro: '#6f9dc0', rosaClaro: '#e6f1f8', lilas: '#c3d4e0', lilasClaro: '#ecf3f8', bege: '#f5ece3', nude: '#efe3d8', verde: '#b5d8c3', verdeEscuro: '#7dab8e', vermelho: '#e8b4b8', vermelhoEscuro: '#c48d92', texto: '#2d3e4a', textoClaro: '#5a6e7a' } }
+        ];
+
+        function getTemaAtual() {
+            // Fonte de verdade: o campo "tema" salvo no Firestore (config).
+            // Assim a preferência sincroniza entre dispositivos e sobrevive
+            // à limpeza de dados do navegador. O cache local serve apenas
+            // para aplicar o tema mais rápido em próximas visitas, antes do
+            // Firestore responder.
+            const idSalvo = (config && config.tema) || localStorage.getItem(TEMA_CACHE_KEY);
+            if (idSalvo) {
+                const found = TEMAS.find(t => t.id === idSalvo);
+                if (found) return found;
+            }
+            return TEMAS[0];
+        }
+
+        function aplicarTema(tema) {
+            const c = tema.cores;
+            document.documentElement.style.setProperty('--bg', c.bg);
+            document.documentElement.style.setProperty('--card', c.card);
+            document.documentElement.style.setProperty('--rosa', c.rosa);
+            document.documentElement.style.setProperty('--rosa-escuro', c.rosaEscuro);
+            document.documentElement.style.setProperty('--rosa-claro', c.rosaClaro);
+            document.documentElement.style.setProperty('--lilas', c.lilas);
+            document.documentElement.style.setProperty('--lilas-claro', c.lilasClaro);
+            document.documentElement.style.setProperty('--bege', c.bege);
+            document.documentElement.style.setProperty('--nude', c.nude);
+            document.documentElement.style.setProperty('--verde', c.verde);
+            document.documentElement.style.setProperty('--verde-escuro', c.verdeEscuro);
+            document.documentElement.style.setProperty('--vermelho', c.vermelho);
+            document.documentElement.style.setProperty('--vermelho-escuro', c.vermelhoEscuro);
+            document.documentElement.style.setProperty('--texto', c.texto);
+            document.documentElement.style.setProperty('--texto-claro', c.textoClaro);
+        }
+
+        function carregarTema() {
+            const tema = getTemaAtual();
+            aplicarTema(tema);
+            document.querySelectorAll('.tema-option').forEach(el => {
+                el.classList.toggle('selecionado', el.dataset.temaId === tema.id);
+            });
+        }
+
+        function initTemas() {
+            const grid = document.getElementById('temasGrid');
+            grid.innerHTML = TEMAS.map(t => `
+                <div class="tema-option" data-tema-id="${t.id}" onclick="window.selecionarTema('${t.id}')">
+                    <div class="tema-bolinha" style="background: ${t.cores.rosa}; border: 2px solid ${t.cores.rosaEscuro};">
+                        <span style="opacity:0.7;">♥</span>
+                    </div>
+                    <span class="tema-nome">${t.nome}</span>
+                </div>
+            `).join('');
+            carregarTema();
+        }
+
+        window.selecionarTema = function(id) {
+            const tema = TEMAS.find(t => t.id === id);
+            if (!tema) return;
+            config.tema = id;
+            salvarConfigAuto(); // persiste no Firestore (fonte de verdade)
+            localStorage.setItem(TEMA_CACHE_KEY, id); // cache local rápido
+            aplicarTema(tema);
+            document.querySelectorAll('.tema-option').forEach(el => {
+                el.classList.toggle('selecionado', el.dataset.temaId === id);
+            });
+            mostrarToastPainel('Tema alterado!', 'sucesso');
+        };
+
+        // ============ CONFIGURAÇÕES ============
+        function getConfig() {
+            const padrao = {
+                nomeEmpresa: '',
+                slogan: '',
+                whatsapp: '',
+                imagem: '',
+                servicos: [],
+                formasPagamento: [],
+                diasFolga: [],
+                folgas: [],
+                horarioInicio: '',
+                horarioFim: '',
+                intervaloMinutos: 60,
+            };
+            const salvo = window._agnailCache.config;
+            if (salvo) {
+                const parsed = { ...salvo };
+                if (parsed.servicos) {
+                    parsed.servicos = parsed.servicos.map(s => ({ ...s, duracao: s.duracao || 30 }));
+                }
+                if (!parsed.folgas) parsed.folgas = [];
+                return { ...padrao, ...parsed };
+            }
+            return padrao;
+        }
+
+        function setConfig(obj) {
+            window._agnailCache.config = obj;
+            manicureRef.collection('meta').doc('configuracoes').set(obj, { merge: false }).catch(err => console.error('Erro ao salvar configurações:', err));
+        }
+
+        function isConfigurado() {
+            // A estrutura já é criada automaticamente no primeiro login (login.html),
+            // então ao chegar aqui a manicure sempre tem uma configuração inicial.
+            return true;
+        }
+
+        function sincronizarColecao(nome, antigos, novos) {
+            const idsNovos = new Set(novos.map(x => x.id));
+            const batch = Agnail.db.batch();
+            novos.forEach(item => {
+                const { id, ...dados } = item;
+                batch.set(manicureRef.collection(nome).doc(id), dados);
+            });
+            antigos.forEach(item => {
+                if (!idsNovos.has(item.id)) {
+                    batch.delete(manicureRef.collection(nome).doc(item.id));
+                }
+            });
+            batch.commit().catch(err => console.error('Erro ao sincronizar ' + nome + ':', err));
+        }
+
+        function getAgendamentos() {
+            return window._agnailCache.agendamentos;
+        }
+        function setAgendamentos(arr) {
+            const antigos = window._agnailCache.agendamentos;
+            window._agnailCache.agendamentos = arr;
+            sincronizarColecao('agendamentos', antigos, arr);
+        }
+
+        function getFinanceiro() {
+            return window._agnailCache.financeiro;
+        }
+        function setFinanceiro(arr) {
+            const antigos = window._agnailCache.financeiro;
+            window._agnailCache.financeiro = arr;
+            sincronizarColecao('financeiro', antigos, arr);
+        }
+
+        let config = getConfig();
+
+        function atualizarHeaderPainel() {
+            document.getElementById('painelNome').textContent = config.nomeEmpresa;
+            document.getElementById('painelSlogan').textContent = config.slogan || '';
+            const logoEl = document.getElementById('painelLogo');
+            if (config.imagem) {
+                logoEl.innerHTML = `<img src="${config.imagem}" alt="Logo">`;
+            } else {
+                logoEl.innerHTML = '<i class="fa-solid fa-spa"></i>';
+            }
+        }
+        atualizarHeaderPainel();
+
+        // ============ CONFIGURAÇÃO INICIAL ============
+        function aguardarCadastroInicial(perfil) {
+            return new Promise((resolve) => {
+                if (perfil && perfil.perfilCompleto) { resolve(); return; }
+                exibirModalConfiguracaoInicial();
+
+                document.getElementById('formConfigInicial').onsubmit = async function(e) {
+                    e.preventDefault();
+                    const slogan = document.getElementById('configSloganInicial').value.trim();
+                    const whatsapp = document.getElementById('configWhatsappInicial').value.replace(/\D/g, '');
+                    const horarioInicio = document.getElementById('configHoraInicioInicial').value;
+                    const horarioFim = document.getElementById('configHoraFimInicial').value;
+                    const intervalo = parseInt(document.getElementById('configIntervaloInicial').value) || 60;
+                    const servicos = window._servicosIniciais || [];
+
+                    const formasPagamento = [];
+                    document.querySelectorAll('.pagamento-inicial-cb:checked').forEach(cb => formasPagamento.push(cb.value));
+
+                    const diasFolga = [];
+                    document.querySelectorAll('#overlayConfigInicial .checkbox-group-2col input[type="checkbox"]:checked').forEach(cb => diasFolga.push(parseInt(cb.value)));
+
+                    if (!whatsapp || !horarioInicio || !horarioFim || servicos.length === 0 || formasPagamento.length === 0) {
+                        mostrarToastPainel('Preencha todos os campos obrigatórios.', 'erro');
+                        return;
+                    }
+                    if (whatsapp.length < 10) {
+                        mostrarToastPainel('WhatsApp inválido. Use DDD + número.', 'erro');
+                        return;
+                    }
+
+                    const btnSubmit = this.querySelector('button[type="submit"]');
+                    btnSubmit.disabled = true;
+                    btnSubmit.innerHTML = 'Salvando...';
+
+                    const imagemPerfil = window._logoInicial || '';
+                    const nomeEmpresaAuto = (perfil && (perfil.nomeEmpresa || perfil.nomeResponsavel)) || usuarioAtual.displayName || '';
+
+                    await manicureRef.collection('meta').doc('configuracoes').set({
+                        nomeEmpresa: nomeEmpresaAuto,
+                        slogan,
+                        whatsapp,
+                        imagem: imagemPerfil,
+                        servicos,
+                        formasPagamento,
+                        diasFolga,
+                        horarioInicio,
+                        horarioFim,
+                        intervaloMinutos: intervalo
+                    }, { merge: true });
+
+                    await manicureRef.collection('meta').doc('perfil').set({
+                        nomeEmpresa: nomeEmpresaAuto,
+                        slogan,
+                        telefone: document.getElementById('configWhatsappInicial').value.trim(),
+                        imagemPerfil,
+                        perfilCompleto: true,
+                        atualizadoEm: firebase.firestore.Timestamp.now()
+                    }, { merge: true });
+
+                    document.getElementById('overlayConfigInicial').style.display = 'none';
+                    resolve();
+                };
+            });
+        }
+
+        // ============ TABS ============
+        const tabBtns = document.querySelectorAll('.tab-btn-bottom');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('ativo'));
+                btn.classList.add('ativo');
+                const tabId = 'tab-' + btn.dataset.tab;
+                tabContents.forEach(tc => tc.classList.remove('ativo'));
+                document.getElementById(tabId).classList.add('ativo');
+                if (btn.dataset.tab === 'agendamentos') carregarAgendamentos();
+                if (btn.dataset.tab === 'financeiro') carregarFinanceiro();
+                if (btn.dataset.tab === 'configuracoes') carregarConfiguracoes();
+            });
+        });
+
+        // ============ AGENDAMENTOS ============
+        function carregarAgendamentos(filtroData = null) {
+            const agendamentos = getAgendamentos();
+            const lista = document.getElementById('listaAgendamentos');
+            let filtrados = agendamentos;
+            if (filtroData) {
+                filtrados = agendamentos.filter(a => a.data === filtroData);
+            }
+            filtrados.sort((a, b) => (a.data + a.horario).localeCompare(b.data + b.horario));
+
+            if (filtrados.length === 0) {
+                lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Nenhum agendamento encontrado.</p>';
+                return;
+            }
+
+            lista.innerHTML = filtrados.map(a => {
+                const dataObj = new Date(a.data + 'T' + a.horario);
+                const agora = new Date();
+                const diffMin = (agora - dataObj) / 60000;
+                const podeAcao = diffMin >= 30 && a.status === 'agendado';
+                let statusClass = 'status-agendado';
+                if (a.status === 'concluido') statusClass = 'status-concluido';
+                if (a.status === 'cancelado') statusClass = 'status-cancelado';
+
+                const servicosStr = a.servicos.join(', ');
+                const tipoAtend = a.tipoAtendimento || 'No local';
+                const enderecoStr = a.endereco ? '• End: '+a.endereco : '';
+
+                return `
+                <div class="agendamento-item">
+                  <div class="agendamento-info" onclick="window.abrirDetalhes('${a.id}')">
+                    <strong>${a.nome}</strong>
+                    <div class="detalhes">
+                      ${new Date(a.data+'T00:00:00').toLocaleDateString('pt-BR')} às ${a.horario} • ${servicosStr}<br>
+                      💰 R$ ${a.valor.toFixed(2)} • ${a.formaPagamento} ${a.observacoes ? '• Obs: '+a.observacoes : ''}
+                      ${tipoAtend} ${enderecoStr}
+                    </div>
+                  </div>
+                  <span class="status-badge ${statusClass}">${a.status}</span>
+                  ${podeAcao ? `
+                  <div class="acoes">
+                    <button class="btn btn-verde btn-sm" onclick="window.concluirAgendamento('${a.id}')">Concluir</button>
+                    <button class="btn btn-vermelho btn-sm" onclick="window.cancelarAgendamentoPainel('${a.id}')">Cancelar</button>
+                    <button class="btn btn-outline btn-sm" onclick="window.abrirDetalhes('${a.id}')"><i class="fa-regular fa-eye"></i></button>
+                  </div>` : (a.status==='agendado' ? '<span style="font-size:0.7rem;color:var(--texto-claro);">Ações em breve</span>' : '')}
+                </div>`;
+            }).join('');
+        }
+
+        // ============ DETALHES ============
+        window.abrirDetalhes = function(id) {
+            const agendamentos = getAgendamentos();
+            const ag = agendamentos.find(a => a.id === id);
+            if (!ag) return;
+
+            const overlay = document.getElementById('overlayDetalhes');
+            const titulo = document.getElementById('detalhesTitulo');
+            const conteudo = document.getElementById('detalhesConteudo');
+
+            titulo.textContent = `Detalhes - ${ag.nome}`;
+
+            const dataFormatada = new Date(ag.data + 'T00:00:00').toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            let html = `
+                <p><strong>👤 Cliente:</strong> ${ag.nome}</p>
+                <p><strong>📱 WhatsApp:</strong> <a href="https://wa.me/55${ag.telefone}" target="_blank">${ag.telefone}</a></p>
+                <p><strong>📅 Data:</strong> ${dataFormatada}</p>
+                <p><strong>⏰ Horário:</strong> ${ag.horario}</p>
+                <p><strong>💅 Serviços:</strong> ${ag.servicos.join(', ')}</p>
+                <p><strong>💰 Valor:</strong> R$ ${ag.valor.toFixed(2)}</p>
+                <p><strong>💳 Pagamento:</strong> ${ag.formaPagamento}</p>
+                <p><strong>🏠 Atendimento:</strong> ${ag.tipoAtendimento || 'No local'}</p>
+            `;
+
+            if (ag.endereco) {
+                const enderecoEnc = encodeURIComponent(ag.endereco);
+                html += `<p><strong>📍 Endereço:</strong> <a href="https://www.google.com/maps/search/?api=1&query=${enderecoEnc}" target="_blank">${ag.endereco}</a></p>`;
+            } else {
+                html += `<p><strong>📍 Endereço:</strong> Não informado</p>`;
+            }
+
+            html += `
+                <p><strong>📝 Observações:</strong> ${ag.observacoes || 'Nenhuma'}</p>
+                <p><strong>📌 Status:</strong> <span class="status-badge ${ag.status === 'agendado' ? 'status-agendado' : ag.status === 'concluido' ? 'status-concluido' : 'status-cancelado'}">${ag.status}</span></p>
+                <p style="font-size:0.75rem; color:var(--texto-claro); margin-top:4px;">ID: ${ag.id}</p>
+            `;
+
+            conteudo.innerHTML = html;
+            overlay.classList.add('active');
+        };
+
+        document.getElementById('fecharDetalhes').addEventListener('click', () => {
+            document.getElementById('overlayDetalhes').classList.remove('active');
+        });
+        document.getElementById('btnFecharDetalhes').addEventListener('click', () => {
+            document.getElementById('overlayDetalhes').classList.remove('active');
+        });
+        document.getElementById('overlayDetalhes').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('active');
+        });
+
+        // ============ CONCLUIR E CANCELAR ============
+        window.concluirAgendamento = function(id) {
+            const agendamentos = getAgendamentos();
+            const ag = agendamentos.find(a => a.id === id);
+            if (!ag) return;
+            abrirModalConclusao(ag);
+        };
+
+        window.cancelarAgendamentoPainel = function(id) {
+            const agendamentos = getAgendamentos();
+            const idx = agendamentos.findIndex(a => a.id === id);
+            if (idx === -1) return;
+            if (confirm('Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.')) {
+                agendamentos[idx].status = 'cancelado';
+                setAgendamentos(agendamentos);
+                carregarAgendamentos(document.getElementById('filtroDataAgenda').value || null);
+                mostrarToastPainel('Agendamento cancelado.', 'sucesso');
+            }
+        };
+
+        function abrirModalConclusao(ag) {
+            const overlay = document.getElementById('overlayAcao');
+            document.getElementById('tituloAcao').textContent = 'Concluir Agendamento';
+            document.getElementById('conteudoAcao').innerHTML = `
+              <p><strong>Cliente:</strong> ${ag.nome}</p>
+              <p><strong>Serviços:</strong> ${ag.servicos.join(', ')}</p>
+              <p><strong>Valor base:</strong> R$ ${ag.valor.toFixed(2)}</p>
+              <div class="input-group">
+                <label>Valor extra (R$):</label>
+                <input type="number" id="inputValorExtra" placeholder="0.00" step="0.01" min="0" value="0">
+              </div>
+              <div class="input-group">
+                <label>Desconto (R$):</label>
+                <input type="number" id="inputDesconto" placeholder="0.00" step="0.01" min="0" value="0">
+              </div>
+              <p><strong>Total final:</strong> R$ <span id="totalFinalCalc">${ag.valor.toFixed(2)}</span></p>
+              <button class="btn btn-verde" id="btnConfirmarConclusao">Confirmar Conclusão</button>
+            `;
+            overlay.classList.add('active');
+
+            const extraInput = document.getElementById('inputValorExtra');
+            const descInput = document.getElementById('inputDesconto');
+            const totalSpan = document.getElementById('totalFinalCalc');
+            const atualizarTotal = () => {
+                const extra = parseFloat(extraInput.value) || 0;
+                const desc = parseFloat(descInput.value) || 0;
+                const total = ag.valor + extra - desc;
+                totalSpan.textContent = Math.max(0, total).toFixed(2);
+            };
+            extraInput.addEventListener('input', atualizarTotal);
+            descInput.addEventListener('input', atualizarTotal);
+
+            document.getElementById('btnConfirmarConclusao').onclick = function() {
+                const extra = parseFloat(extraInput.value) || 0;
+                const desc = parseFloat(descInput.value) || 0;
+                const totalFinal = Math.max(0, ag.valor + extra - desc);
+                const agendamentos = getAgendamentos();
+                const idx = agendamentos.findIndex(a => a.id === ag.id);
+                if (idx !== -1) {
+                    agendamentos[idx].status = 'concluido';
+                    agendamentos[idx].valorFinal = totalFinal;
+                    agendamentos[idx].valorExtra = extra;
+                    agendamentos[idx].desconto = desc;
+                    setAgendamentos(agendamentos);
+                    const financeiro = getFinanceiro();
+                    financeiro.push({
+                        id: 'fin_' + Date.now(),
+                        agendamentoId: ag.id,
+                        data: ag.data,
+                        horario: ag.horario,
+                        cliente: ag.nome,
+                        servicos: ag.servicos,
+                        valor: totalFinal,
+                        formaPagamento: ag.formaPagamento,
+                        observacoes: ag.observacoes,
+                        dataRegistro: new Date().toISOString(),
+                    });
+                    setFinanceiro(financeiro);
+                    overlay.classList.remove('active');
+                    carregarAgendamentos(document.getElementById('filtroDataAgenda').value || null);
+                    mostrarToastPainel('Atendimento concluído e registrado no financeiro!', 'sucesso');
+                }
+            };
+        }
+
+        document.getElementById('fecharAcao').addEventListener('click', () => {
+            document.getElementById('overlayAcao').classList.remove('active');
+        });
+        document.getElementById('overlayAcao').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('active');
+        });
+
+        document.getElementById('filtroDataAgenda').addEventListener('change', function() {
+            carregarAgendamentos(this.value || null);
+        });
+        document.getElementById('limparFiltroAgenda').addEventListener('click', () => {
+            document.getElementById('filtroDataAgenda').value = '';
+            carregarAgendamentos();
+        });
+
+        // ============ FINANCEIRO ============
+        function carregarFinanceiro(filtroInicio = null, filtroFim = null) {
+            const financeiro = getFinanceiro();
+            let dados = financeiro;
+            if (filtroInicio || filtroFim) {
+                dados = financeiro.filter(f => {
+                    const data = f.data;
+                    if (filtroInicio && data < filtroInicio) return false;
+                    if (filtroFim && data > filtroFim) return false;
+                    return true;
+                });
+            }
+
+            const hojeStr = new Date().toISOString().slice(0,10);
+            const mesAtual = hojeStr.slice(0,7);
+            const anoAtual = hojeStr.slice(0,4);
+            const totalHoje = financeiro.filter(f => f.data === hojeStr).reduce((s,f) => s + f.valor, 0);
+            const totalMes = financeiro.filter(f => f.data.startsWith(mesAtual)).reduce((s,f) => s + f.valor, 0);
+            const totalAno = financeiro.filter(f => f.data.startsWith(anoAtual)).reduce((s,f) => s + f.valor, 0);
+            const meses = [...new Set(financeiro.map(f => f.data.slice(0,7)))];
+            const mediaMensal = meses.length ? (financeiro.reduce((s,f) => s + f.valor, 0) / meses.length) : 0;
+
+            document.getElementById('resumoFinanceiro').innerHTML = `
+              <div class="resumo-card"><div class="valor">R$ ${totalHoje.toFixed(2)}</div><div class="label">Hoje</div></div>
+              <div class="resumo-card"><div class="valor">R$ ${totalMes.toFixed(2)}</div><div class="label">Este Mês</div></div>
+              <div class="resumo-card"><div class="valor">R$ ${totalAno.toFixed(2)}</div><div class="label">Este Ano</div></div>
+              <div class="resumo-card"><div class="valor">R$ ${mediaMensal.toFixed(2)}</div><div class="label">Média Mensal</div></div>
+            `;
+
+            const lista = document.getElementById('listaFinanceiro');
+            if (dados.length === 0) {
+                lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Nenhuma transação no período.</p>';
+            } else {
+                lista.innerHTML = dados.sort((a,b) => b.dataRegistro.localeCompare(a.dataRegistro)).map(f => `
+                <div class="financeiro-item">
+                  <span><strong>${f.cliente}</strong> - ${new Date(f.data+'T00:00:00').toLocaleDateString('pt-BR')} ${f.horario}</span>
+                  <span>${f.servicos.join(', ')}</span>
+                  <span style="font-weight:700;color:var(--verde-escuro);">R$ ${f.valor.toFixed(2)}</span>
+                </div>`).join('');
+            }
+        }
+
+        document.getElementById('aplicarFiltroFinanceiro').addEventListener('click', () => {
+            const inicio = document.getElementById('filtroInicio').value;
+            const fim = document.getElementById('filtroFim').value;
+            carregarFinanceiro(inicio || null, fim || null);
+        });
+        document.getElementById('limparFiltroFinanceiro').addEventListener('click', () => {
+            document.getElementById('filtroInicio').value = '';
+            document.getElementById('filtroFim').value = '';
+            carregarFinanceiro();
+        });
+
+        // ============ CONFIGURAÇÕES (com salvamento automático) ============
+        function salvarConfigAuto() {
+            setConfig(config);
+        }
+
+        function carregarConfiguracoes() {
+            config = getConfig();
+            document.getElementById('configNome').value = config.nomeEmpresa || '';
+            document.getElementById('configSlogan').value = config.slogan || '';
+            document.getElementById('configWhatsapp').value = config.whatsapp ? Agnail.mascararCelular(config.whatsapp) : '';
+            document.getElementById('configHoraInicio').value = config.horarioInicio || '';
+            document.getElementById('configHoraFim').value = config.horarioFim || '';
+            document.getElementById('configIntervalo').value = config.intervaloMinutos || '';
+            renderizarServicosConfig();
+            carregarPagamentosConfig();
+            renderizarDiasFolgaConfig();
+            renderizarFolgasEspecificas();
+            carregarSelectCancelar();
+            const link = window.location.origin + window.location.pathname.replace('manicures.html', 'agendamentos.html') + '?m=' + usuarioAtual.uid;
+            document.getElementById('linkCompartilhar').value = link;
+            initTemas();
+        }
+
+        function renderizarServicosConfig() {
+            const lista = document.getElementById('servicosConfigLista');
+            if (!(config.servicos || []).length) {
+                lista.innerHTML = '<span style="color:var(--texto-claro);font-size:0.85rem;">Nenhum serviço cadastrado ainda.</span>';
+                return;
+            }
+            lista.innerHTML = (config.servicos || []).map((s, i) => `
+              <div class="servico-item">
+                <span>${s.nome} - R$ ${s.valor.toFixed(2)} (${s.duracao || 30} min)</span>
+                <button class="btn-icon" onclick="window.removerServico(${i})"><i class="fa-solid fa-trash"></i></button>
+              </div>`).join('');
+        }
+        window.removerServico = function(i) {
+            if (!confirm('Remover este serviço da lista?')) return;
+            config.servicos.splice(i, 1);
+            renderizarServicosConfig();
+            salvarConfigAuto();
+            mostrarToastPainel('Serviço removido.', 'sucesso');
+        };
+
+        // ---- Modal: Adicionar Serviço ----
+        document.getElementById('btnAbrirModalServico').addEventListener('click', function() {
+            document.getElementById('formAddServico').reset();
+            document.getElementById('overlayAddServico').classList.add('active');
+        });
+        document.getElementById('fecharAddServico').addEventListener('click', function() {
+            document.getElementById('overlayAddServico').classList.remove('active');
+        });
+        document.getElementById('formAddServico').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nome = document.getElementById('novoServicoNome').value.trim();
+            const valor = parseFloat(document.getElementById('novoServicoValor').value);
+            const duracao = parseInt(document.getElementById('novoServicoDuracao').value) || 30;
+            if (nome && !isNaN(valor) && valor >= 0) {
+                config.servicos = config.servicos || [];
+                config.servicos.push({ nome, valor, duracao });
+                renderizarServicosConfig();
+                salvarConfigAuto();
+                document.getElementById('overlayAddServico').classList.remove('active');
+                mostrarToastPainel('Serviço adicionado!', 'sucesso');
+            }
+        });
+
+        function carregarPagamentosConfig() {
+            const pagamentos = config.formasPagamento || [];
+            document.querySelectorAll('.pagamento-config-cb').forEach(cb => {
+                cb.checked = pagamentos.includes(cb.value);
+            });
+        }
+
+        // Formas de pagamento: confirmação antes de ativar/desativar, com salvamento automático
+        document.querySelectorAll('.pagamento-config-cb').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const ativar = this.checked;
+                const pergunta = ativar
+                    ? `Ativar "${this.value}" como forma de pagamento?`
+                    : `Remover "${this.value}" das formas de pagamento?`;
+                if (!confirm(pergunta)) {
+                    this.checked = !ativar;
+                    return;
+                }
+                const formasAtivas = [];
+                document.querySelectorAll('.pagamento-config-cb:checked').forEach(c => formasAtivas.push(c.value));
+                config.formasPagamento = formasAtivas;
+                salvarConfigAuto();
+                mostrarToastPainel('Formas de pagamento atualizadas.', 'sucesso');
+            });
+        });
+
+        function renderizarDiasFolgaConfig() {
+            const diasFolga = config.diasFolga || [];
+            document.querySelectorAll('#diasFolgaConfig input[type="checkbox"]').forEach(cb => {
+                cb.checked = diasFolga.includes(parseInt(cb.value));
+            });
+        }
+
+        // Dias de folga fixos: confirmação antes de marcar/desmarcar, com salvamento automático
+        document.querySelectorAll('#diasFolgaConfig input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const nomeDia = this.parentElement.textContent.trim();
+                const marcar = this.checked;
+                const pergunta = marcar
+                    ? `Marcar ${nomeDia} como folga fixa?`
+                    : `Remover ${nomeDia} da lista de folgas fixas?`;
+                if (!confirm(pergunta)) {
+                    this.checked = !marcar;
+                    return;
+                }
+                const diasFolga = [];
+                document.querySelectorAll('#diasFolgaConfig input[type="checkbox"]:checked').forEach(c => diasFolga.push(parseInt(c.value)));
+                config.diasFolga = diasFolga;
+                salvarConfigAuto();
+                mostrarToastPainel('Dias de folga atualizados.', 'sucesso');
+            });
+        });
+
+        function renderizarFolgasEspecificas() {
+            const lista = document.getElementById('listaFolgas');
+            const folgas = config.folgas || [];
+            if (folgas.length === 0) {
+                lista.innerHTML = '<span style="color:var(--texto-claro);font-size:0.85rem;">Nenhuma data de folga adicionada.</span>';
+                return;
+            }
+            lista.innerHTML = folgas.map(data => `
+                <span class="folga-item">
+                    ${new Date(data+'T00:00:00').toLocaleDateString('pt-BR')}
+                    <button onclick="window.removerFolga('${data}')" title="Remover"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+            `).join('');
+        }
+
+        window.removerFolga = function(data) {
+            if (!confirm(`Remover a folga do dia ${new Date(data+'T00:00:00').toLocaleDateString('pt-BR')}?`)) return;
+            config.folgas = (config.folgas || []).filter(d => d !== data);
+            renderizarFolgasEspecificas();
+            salvarConfigAuto();
+            mostrarToastPainel('Folga removida.', 'sucesso');
+        };
+
+        document.getElementById('btnAddFolga').addEventListener('click', () => {
+            const input = document.getElementById('inputNovaFolga');
+            const data = input.value;
+            if (!data) {
+                mostrarToastPainel('Selecione uma data.', 'erro');
+                return;
+            }
+            if ((config.folgas || []).includes(data)) {
+                mostrarToastPainel('Esta data já está na lista de folgas.', 'erro');
+                return;
+            }
+            config.folgas = (config.folgas || []).concat(data);
+            renderizarFolgasEspecificas();
+            salvarConfigAuto();
+            input.value = '';
+            mostrarToastPainel('Folga adicionada.', 'sucesso');
+        });
+
+        function carregarSelectCancelar() {
+            const agendamentos = getAgendamentos().filter(a => a.status === 'agendado');
+            const select = document.getElementById('selectCancelarAgendamento');
+            select.innerHTML = '<option value="">Selecione um agendamento...</option>' +
+                agendamentos.map(a =>
+                    `<option value="${a.id}">${a.nome} - ${new Date(a.data+'T00:00:00').toLocaleDateString('pt-BR')} ${a.horario}</option>`
+                ).join('');
+        }
+        document.getElementById('btnCancelarAgendamento').addEventListener('click', () => {
+            const id = document.getElementById('selectCancelarAgendamento').value;
+            if (!id) return;
+            if (confirm('Cancelar este agendamento?')) {
+                const agendamentos = getAgendamentos();
+                const idx = agendamentos.findIndex(a => a.id === id);
+                if (idx !== -1) {
+                    agendamentos[idx].status = 'cancelado';
+                    setAgendamentos(agendamentos);
+                    carregarSelectCancelar();
+                    carregarAgendamentos();
+                    mostrarToastPainel('Agendamento cancelado.', 'sucesso');
+                }
+            }
+        });
+
+        // ---- Modal: Editar Logo, Nome e Slogan ----
+        document.getElementById('headerPainelClicavel').addEventListener('click', function() {
+            document.getElementById('configNome').value = config.nomeEmpresa || '';
+            document.getElementById('configSlogan').value = config.slogan || '';
+            document.getElementById('overlayEditarPerfil').classList.add('active');
+        });
+        document.getElementById('fecharEditarPerfil').addEventListener('click', function() {
+            document.getElementById('overlayEditarPerfil').classList.remove('active');
+        });
+
+        document.getElementById('btnUploadLogo').addEventListener('click', () => document.getElementById('inputLogo').click());
+        document.getElementById('inputLogo').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                config.imagem = await Agnail.processarImagem(file);
+                atualizarHeaderPainel();
+                salvarConfigAuto();
+                mostrarToastPainel('Logo atualizada.', 'sucesso');
+            }
+        });
+        document.getElementById('btnRemoverLogo').addEventListener('click', () => {
+            config.imagem = '';
+            atualizarHeaderPainel();
+            salvarConfigAuto();
+            mostrarToastPainel('Logo removida.', 'sucesso');
+        });
+
+        document.getElementById('configNome').addEventListener('blur', function() {
+            const valor = this.value.trim();
+            if (!valor || valor === config.nomeEmpresa) return;
+            config.nomeEmpresa = valor;
+            atualizarHeaderPainel();
+            salvarConfigAuto();
+        });
+        document.getElementById('configSlogan').addEventListener('blur', function() {
+            const valor = this.value.trim();
+            if (valor === config.slogan) return;
+            config.slogan = valor;
+            atualizarHeaderPainel();
+            salvarConfigAuto();
+        });
+
+        document.getElementById('btnCopiarLink').addEventListener('click', function() {
+            const input = document.getElementById('linkCompartilhar');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                mostrarToastPainel('Link copiado!', 'sucesso');
+            }).catch(() => {
+                document.execCommand('copy');
+                mostrarToastPainel('Link copiado!', 'sucesso');
+            });
+        });
+
+        // Demais campos: WhatsApp e horário de atendimento salvam sozinhos ao perder o foco
+        document.getElementById('configWhatsapp').addEventListener('blur', function() {
+            const valor = this.value.trim().replace(/\D/g, '');
+            if (!valor || valor === config.whatsapp) return;
+            config.whatsapp = valor;
+            salvarConfigAuto();
+        });
+        document.getElementById('configHoraInicio').addEventListener('change', function() {
+            config.horarioInicio = this.value;
+            salvarConfigAuto();
+        });
+        document.getElementById('configHoraFim').addEventListener('change', function() {
+            config.horarioFim = this.value;
+            salvarConfigAuto();
+        });
+        document.getElementById('configIntervalo').addEventListener('change', function() {
+            config.intervaloMinutos = parseInt(this.value) || 60;
+            salvarConfigAuto();
+        });
+
+        Agnail.aplicarMascaraCelular(document.getElementById('configWhatsapp'));
+
+        function mostrarToastPainel(msg, tipo) {
+            const toast = document.getElementById('toastPainel');
+            toast.textContent = msg;
+            toast.className = 'toast ' + (tipo || '');
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ============ CONSULTAR TERMOS (sem bloquear, só para leitura) ============
+        document.getElementById('btnConsultarTermos').addEventListener('click', function() {
+            document.getElementById('conteudoTermos').innerHTML = window.AGNAIL_TERMOS_HTML || '';
+            const overlay = document.getElementById('overlayTermos');
+            const checkWrapper = document.getElementById('checkAceiteTermos').parentElement;
+            const btn = document.getElementById('btnAceitarTermos');
+            checkWrapper.style.display = 'none';
+            btn.disabled = false;
+            btn.textContent = 'Fechar';
+            btn.onclick = function() {
+                overlay.classList.remove('active');
+                checkWrapper.style.display = '';
+                btn.textContent = 'Continuar';
+            };
+            overlay.classList.add('active');
+        });
+
+        // ============ SAIR / EXCLUIR CONTA ============
+        document.getElementById('btnSairPainel').addEventListener('click', async function() {
+            await Agnail.logout();
+            window.location.href = 'login.html';
+        });
+
+        document.getElementById('btnExcluirConta').addEventListener('click', async function() {
+            const confirmar = confirm('Tem certeza que deseja excluir sua conta? Seu acesso será bloqueado imediatamente. Seus dados ficam guardados por 90 dias; fazer login novamente com esta mesma conta dentro desse prazo restaura tudo automaticamente.');
+            if (!confirmar) return;
+            try {
+                await Agnail.solicitarExclusaoConta(usuarioAtual.uid, usuarioAtual.email);
+                await Agnail.logout();
+                alert('Sua conta foi marcada para exclusão. Você pode fazer login novamente dentro de 90 dias para restaurá-la.');
+                window.location.href = 'login.html';
+            } catch (e) {
+                console.error(e);
+                mostrarToastPainel('Erro ao solicitar exclusão. Tente novamente.', 'erro');
+            }
+        });
+
+        // ============ INICIALIZAÇÃO ============
+        if (!isConfigurado()) {
+            exibirModalConfiguracaoInicial();
+        } else {
+            carregarAgendamentos();
+            carregarFinanceiro();
+            carregarConfiguracoes();
+        }
+
+        window.removerServico = window.removerServico;
+        window.concluirAgendamento = window.concluirAgendamento;
+        window.cancelarAgendamentoPainel = window.cancelarAgendamentoPainel;
+        window.removerServicoInicial = window.removerServicoInicial;
+        window.selecionarTema = window.selecionarTema;
+        window.removerFolga = window.removerFolga;
+        window.abrirDetalhes = window.abrirDetalhes;
+
+        // ============ REGISTRO DO SERVICE WORKER ============
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registrado com sucesso!', reg))
+                .catch(err => console.log('Falha ao registrar SW:', err));
+        }
+    })();
+</script>
+</body>
+</html>

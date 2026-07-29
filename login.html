@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Agnail - Entrar</title>
+<link rel="icon" href="assets/logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --bg: #fdf6f9; --card: #ffffff; --rosa: #e4a5b8; --rosa-escuro: #c47d8f;
+        --rosa-claro: #fbeaef; --lilas: #d5c3e0; --lilas-claro: #f3ecf8;
+        --texto: #5d4a5c; --texto-claro: #8a7a89;
+        --sombra: 0 4px 20px rgba(180,150,170,0.15); --sombra-lg: 0 12px 40px rgba(180,150,170,0.2);
+        --radius: 20px; --radius-sm: 12px; --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+        font-family:'Nunito', system-ui, sans-serif; background: var(--bg); color: var(--texto);
+        min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+        background-image: radial-gradient(ellipse at 20% 20%, rgba(228,165,184,0.08) 0%, transparent 50%),
+                           radial-gradient(ellipse at 80% 60%, rgba(213,195,224,0.08) 0%, transparent 50%);
+        background-attachment: fixed;
+    }
+    .card {
+        background: var(--card); border-radius: var(--radius); box-shadow: var(--sombra-lg);
+        padding: 40px 32px; max-width: 400px; width:100%; text-align:center;
+    }
+    .logo {
+        width:76px; height:76px; border-radius:50%; background: var(--rosa-claro); display:flex;
+        align-items:center; justify-content:center; margin:0 auto 18px; font-size:32px; color:var(--rosa-escuro);
+        box-shadow: var(--sombra); border:3px solid white;
+    }
+    h1 { font-family:'Playfair Display', serif; font-size:1.6rem; font-weight:500; margin-bottom:6px; }
+    .slogan { color: var(--texto-claro); font-size:0.9rem; margin-bottom:28px; }
+    .btn-google {
+        display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+        padding:14px; border-radius: var(--radius-sm); border:1px solid #e0d5da; background:#fff;
+        font-family:'Nunito', sans-serif; font-size:0.95rem; font-weight:600; color:var(--texto);
+        cursor:pointer; transition: var(--transition);
+    }
+    .btn-google:hover { background: var(--rosa-claro); border-color: var(--rosa); }
+    .btn-google img { width:20px; height:20px; }
+    .btn-google:disabled { opacity:0.6; cursor:not-allowed; }
+    .aviso {
+        margin-top:22px; font-size:0.78rem; color: var(--texto-claro); line-height:1.5;
+        background: var(--rosa-claro); border-radius: var(--radius-sm); padding:12px 14px;
+    }
+    .erro { color:#c0455a; font-size:0.85rem; margin-top:14px; display:none; }
+    .carregando { display:none; margin-top:18px; color: var(--texto-claro); font-size:0.85rem; }
+    .carregando.show, .erro.show { display:block; }
+    .spinner {
+        width:18px; height:18px; border:2.5px solid var(--rosa-claro); border-top-color: var(--rosa-escuro);
+        border-radius:50%; display:inline-block; vertical-align:middle; margin-right:6px;
+        animation: girar 0.8s linear infinite;
+    }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    /* Modal boas-vindas / teste grátis */
+    .overlay {
+        position:fixed; inset:0; background:rgba(93,74,92,0.45); display:none; align-items:center;
+        justify-content:center; padding:20px; z-index:100;
+    }
+    .overlay.show { display:flex; }
+    .modal { background:var(--card); border-radius:var(--radius); padding:32px 26px; max-width:380px; width:100%; text-align:center; box-shadow:var(--sombra-lg); }
+    .modal .icone { font-size:2.4rem; margin-bottom:12px; }
+    .modal h2 { font-family:'Playfair Display', serif; font-size:1.3rem; margin-bottom:10px; }
+    .modal p { color:var(--texto-claro); font-size:0.9rem; line-height:1.6; margin-bottom:8px; }
+    .modal .destaque { color:var(--rosa-escuro); font-weight:700; }
+    .modal button {
+        margin-top:16px; width:100%; padding:13px; border:none; border-radius:var(--radius-sm);
+        background: var(--rosa-escuro); color:#fff; font-family:'Nunito',sans-serif; font-weight:600;
+        font-size:0.95rem; cursor:pointer; transition: var(--transition);
+    }
+    .modal button:hover { background: var(--rosa); }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <div class="logo"><i class="fa-solid fa-spa"></i></div>
+    <h1>Agnail</h1>
+    <p class="slogan">Painel da manicure</p>
+
+    <button class="btn-google" id="btnLoginGoogle">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+        Entrar com Google
+    </button>
+
+    <div class="carregando" id="carregando"><span class="spinner"></span>Entrando...</div>
+    <div class="erro" id="erroLogin"></div>
+
+    <p class="aviso">Ao entrar você concorda em usar sua conta Google para acessar o painel de gestão da sua agenda.</p>
+</div>
+
+<div class="overlay" id="overlayBoasVindas">
+    <div class="modal">
+        <div class="icone">🎉</div>
+        <h2>Bem-vinda ao Agnail!</h2>
+        <p>Você tem <span class="destaque" id="txtDiasTeste">15 dias</span> de teste grátis para explorar todos os recursos do painel.</p>
+        <p>Depois desse período, a mensalidade é de <span class="destaque" id="txtMensalidade">R$ 50,00</span>. O teste grátis é concedido apenas no primeiro cadastro.</p>
+        <button id="btnComecar">Começar agora</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function () {
+    const btn = document.getElementById('btnLoginGoogle');
+    const carregando = document.getElementById('carregando');
+    const erroEl = document.getElementById('erroLogin');
+    const overlayBoasVindas = document.getElementById('overlayBoasVindas');
+
+    function mostrarErro(msg) {
+        erroEl.textContent = msg;
+        erroEl.classList.add('show');
+    }
+
+    function redirecionar(statusAcesso) {
+        if (statusAcesso.status === 'teste_gratuito' || statusAcesso.status === 'ativo') {
+            window.location.href = 'manicures.html';
+        } else {
+            // aguardando_aprovacao, expirado, exclusao_solicitada, etc.
+            window.location.href = 'cobranca.html';
+        }
+    }
+
+    btn.addEventListener('click', async function () {
+        btn.disabled = true;
+        carregando.classList.add('show');
+        erroEl.classList.remove('show');
+        try {
+            const cred = await Agnail.loginGoogle();
+            const resultado = await Agnail.processarPosLogin(cred.user);
+
+            if (resultado.novoUsuario) {
+                const configSistema = await Agnail.getConfigSistema();
+                document.getElementById('txtDiasTeste').textContent = (configSistema.diasTeste || 15) + ' dias';
+                document.getElementById('txtMensalidade').textContent =
+                    'R$ ' + Number(configSistema.mensalidade || 50).toFixed(2).replace('.', ',');
+                overlayBoasVindas.classList.add('show');
+                document.getElementById('btnComecar').onclick = () => redirecionar(resultado.statusAcesso);
+            } else {
+                redirecionar(resultado.statusAcesso);
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarErro('Não foi possível entrar. Tente novamente.');
+            btn.disabled = false;
+            carregando.classList.remove('show');
+        }
+    });
+
+    // Se já estiver logada, verifica status e redireciona direto
+    Agnail.onAuthChange(async function (user) {
+        if (!user) return;
+        // evita reprocessar durante o próprio fluxo de clique acima
+        if (btn.disabled) return;
+        try {
+            const assinatura = await Agnail.getAssinatura(user.uid);
+            if (!assinatura) return; // ainda não tem estrutura -> deixa clicar em entrar
+            const statusAcesso = Agnail.calcularStatusAcesso(assinatura);
+            redirecionar(statusAcesso);
+        } catch (e) { /* silencioso: usuário pode simplesmente clicar em entrar */ }
+    });
+})();
+</script>
+</body>
+</html>

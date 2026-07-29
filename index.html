@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Agnail</title>
+<link rel="icon" href="assets/logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root { --bg:#fdf6f9; --rosa-claro:#fbeaef; --rosa-escuro:#c47d8f; --texto-claro:#8a7a89; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+        font-family:'Nunito', system-ui, sans-serif; background:var(--bg); min-height:100vh;
+        display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+    }
+    .logo { width:70px; height:70px; border-radius:50%; background:var(--rosa-claro); display:flex; align-items:center;
+        justify-content:center; font-size:28px; color:var(--rosa-escuro); box-shadow:0 4px 20px rgba(180,150,170,0.15); }
+    h1 { font-family:'Playfair Display', serif; font-weight:500; color:#5d4a5c; }
+    .spinner { width:22px; height:22px; border:3px solid var(--rosa-claro); border-top-color:var(--rosa-escuro); border-radius:50%; animation:girar 0.8s linear infinite; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+    p { color:var(--texto-claro); font-size:0.88rem; }
+</style>
+</head>
+<body>
+    <div class="logo"><i class="fa-solid fa-spa"></i></div>
+    <h1>Agnail</h1>
+    <span class="spinner"></span>
+    <p>Carregando...</p>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function () {
+    // Página inicial: apenas decide para onde mandar o usuário.
+    // - Não logado -> login.html
+    // - Logado como admin -> adm.html
+    // - Logado como manicure -> manicures.html (se acesso liberado) ou cobranca.html
+    Agnail.onAuthChange(async function (user) {
+        if (!user) {
+            window.location.replace('login.html');
+            return;
+        }
+        try {
+            const usuario = await Agnail.getUsuario(user.uid);
+            if (!usuario) {
+                window.location.replace('login.html');
+                return;
+            }
+            if (usuario.tipo === 'admin') {
+                window.location.replace('adm.html');
+                return;
+            }
+            const assinatura = await Agnail.getAssinatura(user.uid);
+            const statusAcesso = Agnail.calcularStatusAcesso(assinatura);
+            window.location.replace(statusAcesso.acessoLiberado ? 'manicures.html' : 'cobranca.html');
+        } catch (e) {
+            console.error(e);
+            window.location.replace('login.html');
+        }
+    });
+
+    // Se depois de um tempo razoável nada aconteceu (ex: Firebase lento),
+    // evita deixar a pessoa presa na tela de carregamento.
+    setTimeout(function () {
+        if (!Agnail.auth.currentUser) {
+            window.location.replace('login.html');
+        }
+    }, 4000);
+})();
+</script>
+</body>
+</html>

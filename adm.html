@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Agnail - Painel Administrativo do Sistema</title>
+<link rel="icon" href="assets/logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --bg:#ffffff; --card:#ffffff; --rosa:#1a1a1a; --rosa-escuro:#000000; --rosa-claro:#f2f2f2;
+        --lilas:#e2e2e2; --lilas-claro:#f7f7f7; --verde:#dcf2e1; --verde-escuro:#2f9e52;
+        --vermelho:#fbdfdf; --vermelho-escuro:#c23b3b; --amarelo:#fbecc7; --amarelo-escuro:#a9791a;
+        --texto:#161616; --texto-claro:#6e6e6e;
+        --sombra:0 4px 16px rgba(0,0,0,0.07); --sombra-lg:0 12px 32px rgba(0,0,0,0.12);
+        --radius:18px; --radius-sm:12px; --transition:0.2s cubic-bezier(0.4,0,0.2,1);
+        --borda:#e6e6e6;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; }
+    body {
+        font-family:'Nunito', system-ui, sans-serif; background:var(--bg); color:var(--texto); min-height:100vh;
+        padding-bottom:40px;
+    }
+    .container { max-width:1080px; margin:0 auto; padding:20px; }
+
+    /* ---- Login gate ----
+       Enquanto a tela de login está visível (corpo sem a aba principal),
+       a página fica travada como uma tela de app nativo: sem rolagem
+       quando o conteúdo cabe no viewport. */
+    body:has(#telaLogin:not(.escondido)) {
+        height:100vh; height:100dvh;
+        overflow:hidden;
+        padding-bottom:0;
+    }
+    #telaLogin {
+        height:100vh; height:100dvh;
+        display:flex; align-items:center; justify-content:center; padding:20px;
+        overflow:hidden;
+    }
+    .card-login { background:var(--card); border:1px solid var(--borda); border-radius:var(--radius); box-shadow:var(--sombra-lg); padding:36px 30px; max-width:380px; width:100%; text-align:center; }
+    .card-login .logo { width:64px; height:64px; border-radius:50%; background:var(--lilas-claro); border:1px solid var(--borda); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:26px; color:var(--texto); box-shadow:var(--sombra); }
+    .card-login h1 { font-family:'Playfair Display', serif; font-size:1.4rem; margin-bottom:4px; }
+    .card-login p { color:var(--texto-claro); font-size:0.85rem; margin-bottom:22px; }
+    .btn-google { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:13px; border-radius:var(--radius-sm); border:1px solid var(--borda); background:#fff; font-weight:600; cursor:pointer; transition:var(--transition); }
+    .btn-google:hover { background: var(--rosa-claro); }
+    .btn-google img { width:20px; height:20px; }
+    .aviso-negado { margin-top:16px; font-size:0.82rem; color:var(--vermelho-escuro); background:var(--vermelho); padding:10px 12px; border-radius:var(--radius-sm); display:none; }
+    .aviso-negado.show { display:block; }
+
+    /* ---- Header ---- */
+    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+    .header .titulo { display:flex; align-items:center; gap:12px; }
+    .header .titulo .icone { width:44px; height:44px; border-radius:50%; background:var(--lilas-claro); border:1px solid var(--borda); display:flex; align-items:center; justify-content:center; color:var(--texto); font-size:20px; }
+    .header h1 { font-family:'Playfair Display', serif; font-size:1.3rem; font-weight:500; }
+    .header .sub { font-size:0.8rem; color:var(--texto-claro); }
+    .btn-sair-header {
+        background:transparent; border:1px solid var(--borda); color:var(--texto-claro);
+        width:38px; height:38px; padding:0; border-radius:50%; cursor:pointer;
+        font-size:0.95rem; display:flex; align-items:center; justify-content:center;
+        transition:var(--transition);
+    }
+    .btn-sair-header i { margin:0; }
+    .btn-sair-header:hover { background:var(--lilas-claro); color:var(--texto); }
+
+    /* ---- Tabs (barra inferior fixa, mesmo padrão do painel da manicure) ---- */
+    body { padding-bottom: 78px; }
+    .tabs-bottom {
+        position: fixed; bottom: 0; left: 0; width: 100%;
+        background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        box-shadow: 0 -2px 20px rgba(0,0,0,0.06); border-top: 1px solid var(--borda);
+        display: flex; justify-content: space-around; padding: 8px 0 env(safe-area-inset-bottom); z-index: 50;
+    }
+    .tab-btn-bottom {
+        flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 6px 4px; border: none; background: transparent; font-family: 'Nunito', sans-serif;
+        font-weight: 600; font-size: 0.65rem; color: var(--texto-claro); cursor: pointer; gap: 3px;
+        letter-spacing: 0.2px; position: relative; border-radius: 12px; transition: var(--transition);
+    }
+    .tab-btn-bottom i { font-size: 20px; transition: var(--transition); }
+    .tab-btn-bottom.ativo { color: var(--rosa-escuro); font-weight: 700; }
+    .tab-btn-bottom::after {
+        content: ''; position: absolute; top: 0; left: 20%; width: 60%; height: 3px;
+        background: var(--rosa-escuro); border-radius: 0 0 4px 4px; opacity: 0; transition: var(--transition);
+    }
+    .tab-btn-bottom.ativo::after { opacity: 1; }
+    .aba { display:none; }
+    .aba.ativa { display:block; }
+
+    /* ---- Cards / grid ---- */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+    .stat-card { background:var(--card); border:1px solid var(--borda); border-radius:var(--radius-sm); padding:16px; box-shadow:var(--sombra); }
+    .stat-card .num { font-family:'Playfair Display', serif; font-size:1.7rem; color:var(--rosa-escuro); }
+    .stat-card .lbl { font-size:0.78rem; color:var(--texto-claro); }
+
+    .lista-manicures { display:grid; gap:12px; }
+    .manicure-card { background:var(--card); border:1px solid var(--borda); border-radius:var(--radius-sm); box-shadow:var(--sombra); padding:16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .manicure-foto { width:52px; height:52px; border-radius:50%; object-fit:cover; background:var(--rosa-claro); display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--rosa-escuro); flex-shrink:0; }
+    .manicure-foto img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+    .manicure-info { flex:1; min-width:180px; }
+    .manicure-info .nome { font-weight:700; font-size:0.95rem; }
+    .manicure-info .email { font-size:0.78rem; color:var(--texto-claro); }
+    .manicure-meta { display:flex; gap:16px; flex-wrap:wrap; font-size:0.78rem; color:var(--texto-claro); }
+    .manicure-meta strong { color:var(--texto); }
+    .badge { padding:4px 10px; border-radius:14px; font-size:0.72rem; font-weight:700; white-space:nowrap; }
+    .badge-teste { background:var(--lilas-claro); color:var(--texto); }
+    .badge-aguardando { background:var(--amarelo); color:#7a5a17; }
+    .badge-ativo { background:var(--verde); color:#3d6b4a; }
+    .badge-expirado { background:var(--vermelho); color:var(--vermelho-escuro); }
+    .badge-exclusao { background:#e6dede; color:#6a5a5a; }
+    .btn-detalhe { border:none; background:var(--rosa-claro); color:var(--rosa-escuro); padding:8px 14px; border-radius:var(--radius-sm); font-weight:600; font-size:0.82rem; cursor:pointer; }
+    .btn-detalhe:hover { background:var(--rosa); color:#fff; }
+
+    .vazio { text-align:center; padding:40px 20px; color:var(--texto-claro); font-size:0.9rem; }
+
+    /* ---- Pagamentos pendentes ---- */
+    .pagamento-card { background:var(--card); border:1px solid var(--borda); border-radius:var(--radius-sm); box-shadow:var(--sombra); padding:16px; margin-bottom:12px; }
+    .pagamento-topo { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
+    .pagamento-topo .nome { font-weight:700; }
+    .pagamento-topo .valor { color:var(--rosa-escuro); font-weight:700; }
+    .comprovante-img { max-width:100%; max-height:260px; border-radius:var(--radius-sm); cursor:zoom-in; display:block; margin:10px 0; }
+    .acoes-pagamento { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn-aprovar { background:var(--verde-escuro); color:#fff; border:none; padding:9px 16px; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem; }
+    .btn-rejeitar { background:var(--vermelho-escuro); color:#fff; border:none; padding:9px 16px; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem; }
+    textarea.obs { width:100%; margin-top:8px; padding:8px; border-radius:8px; border:1px solid var(--borda); font-family:inherit; font-size:0.85rem; resize:vertical; min-height:44px; }
+
+    /* ---- Contas pendentes de exclusão ---- */
+    .exclusao-card { background:var(--card); border:1px solid var(--borda); border-radius:var(--radius-sm); box-shadow:var(--sombra); padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .btn-reativar { background:var(--verde-escuro); color:#fff; border:none; padding:9px 14px; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.82rem; }
+    .btn-excluir-perm { background:var(--vermelho-escuro); color:#fff; border:none; padding:9px 14px; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.82rem; }
+
+    /* ---- Configurações ---- */
+    .form-config { background:var(--card); border:1px solid var(--borda); border-radius:var(--radius); box-shadow:var(--sombra); padding:22px; max-width:480px; display:grid; gap:14px; }
+    .campo label { display:block; font-size:0.82rem; font-weight:600; margin-bottom:6px; color:var(--texto); }
+    .campo input { width:100%; padding:11px 12px; border-radius:var(--radius-sm); border:1px solid var(--borda); font-family:inherit; font-size:0.9rem; }
+    .btn-salvar { background:var(--rosa-escuro); color:#fff; border:none; padding:13px; border-radius:var(--radius-sm); font-weight:700; cursor:pointer; }
+    .btn-salvar:hover { background:var(--rosa); }
+
+    /* ---- Modal detalhe manicure ---- */
+    .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; padding:16px; z-index:100; }
+    .overlay.show { display:flex; }
+
+    /* Bloqueia interação e rolagem do conteúdo de fundo enquanto um modal está aberto */
+    body.agnail-modal-aberto {
+        overflow: hidden;
+    }
+    body.agnail-modal-aberto > *:not(.overlay) {
+        pointer-events: none;
+        user-select: none;
+    }
+    body.agnail-modal-aberto > .overlay {
+        pointer-events: auto;
+        user-select: auto;
+    }
+    .modal { background:var(--card); border-radius:var(--radius); padding:26px; max-width:440px; width:100%; max-height:86vh; overflow-y:auto; box-shadow:var(--sombra-lg); position:relative; }
+    .modal-fechar { position:absolute; top:14px; right:14px; background:none; border:none; font-size:1.1rem; color:var(--texto-claro); cursor:pointer; }
+    .modal h3 { font-family:'Playfair Display', serif; font-size:1.2rem; margin-bottom:16px; }
+    .modal .linha { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--borda); font-size:0.86rem; }
+    .modal .linha:last-child { border-bottom:none; }
+    .modal .linha .lbl { color:var(--texto-claro); }
+    .modal .acoes-modal { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+    .modal .acoes-modal button { flex:1; padding:11px; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem; }
+    .btn-bloquear { background:var(--vermelho-escuro); color:#fff; }
+    .btn-liberar { background:var(--verde-escuro); color:#fff; }
+    .btn-venc { background:var(--lilas); color:var(--texto); }
+
+    .toast { position:fixed; top:24px; left:50%; transform:translateX(-50%) translateY(-100px); background:var(--texto); color:#fff; padding:12px 20px; border-radius:12px; font-size:0.88rem; opacity:0; transition:var(--transition); z-index:200; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast.sucesso { background:var(--verde-escuro); }
+    .toast.erro { background:var(--vermelho-escuro); }
+    .escondido { display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="telaLogin">
+    <div class="card-login">
+        <div class="logo"><i class="fa-solid fa-user-shield"></i></div>
+        <h1>Painel Administrativo</h1>
+        <p>Acesso restrito à equipe Agnail</p>
+        <button class="btn-google" id="btnLoginAdmin">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+            Entrar com Google
+        </button>
+        <div class="aviso-negado" id="avisoNegado">Esta conta não tem permissão de administrador.</div>
+    </div>
+</div>
+
+<div class="container escondido" id="telaPrincipal">
+    <div class="header">
+        <div class="titulo">
+            <div class="icone"><i class="fa-solid fa-user-shield"></i></div>
+            <div>
+                <h1>Administrativo</h1>
+                <div class="sub" id="emailAdminLogado"></div>
+            </div>
+        </div>
+        <button class="btn-sair-header" id="btnAtualizarDados" title="Atualizar dados" aria-label="Atualizar dados" style="margin-left:auto;">
+            <i class="fa-solid fa-rotate"></i>
+        </button>
+        <button class="btn-sair-header" id="btnSairAdmin" title="Sair" aria-label="Sair">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+    </div>
+
+    <!-- ABA DASHBOARD -->
+    <div class="aba ativa" id="aba-dashboard">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="lista-manicures" id="listaManicures"></div>
+    </div>
+
+    <!-- ABA PAGAMENTOS -->
+    <div class="aba" id="aba-pagamentos">
+        <div id="listaPagamentos"></div>
+    </div>
+
+    <!-- ABA EXCLUSÕES -->
+    <div class="aba" id="aba-exclusoes">
+        <div id="listaExclusoes"></div>
+    </div>
+
+    <!-- ABA CONFIG -->
+    <div class="aba" id="aba-config">
+        <form class="form-config" id="formConfigSistema">
+            <div class="campo">
+                <label>Valor da mensalidade (R$)</label>
+                <input type="number" step="0.01" id="cfgMensalidade" required>
+            </div>
+            <div class="campo">
+                <label>Chave PIX</label>
+                <input type="text" id="cfgChavePix" maxlength="50" required>
+            </div>
+            <div class="campo">
+                <label>WhatsApp financeiro (DDI+DDD+número)</label>
+                <input type="text" id="cfgWhatsapp" required>
+            </div>
+            <div class="campo">
+                <label>Dias de teste grátis</label>
+                <input type="number" id="cfgDiasTeste" required>
+            </div>
+            <button type="submit" class="btn-salvar">Salvar configurações</button>
+        </form>
+    </div>
+</div>
+
+<div class="tabs-bottom escondido" id="tabsBottomAdmin">
+    <button class="tab-btn-bottom ativo" data-aba="dashboard">
+        <i class="fa-solid fa-users"></i>
+        <span>Manicures</span>
+    </button>
+    <button class="tab-btn-bottom" data-aba="pagamentos">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+        <span>Pagamentos</span>
+    </button>
+    <button class="tab-btn-bottom" data-aba="exclusoes">
+        <i class="fa-solid fa-user-slash"></i>
+        <span>Exclusões</span>
+    </button>
+    <button class="tab-btn-bottom" data-aba="config">
+        <i class="fa-solid fa-gear"></i>
+        <span>Config</span>
+    </button>
+</div>
+
+<!-- Modal detalhe da manicure -->
+<div class="overlay" id="overlayDetalheManicure">
+    <div class="modal">
+        <button class="modal-fechar" id="fecharDetalheManicure"><i class="fa-solid fa-xmark"></i></button>
+        <h3>Detalhes</h3>
+        <div id="conteudoDetalheManicure"></div>
+    </div>
+</div>
+
+<!-- Modal comprovante ampliado -->
+<div class="overlay" id="overlayComprovanteAmpliado">
+    <div class="modal" style="text-align:center;">
+        <button class="modal-fechar" id="fecharComprovanteAmpliado"><i class="fa-solid fa-xmark"></i></button>
+        <img id="imgComprovanteAmpliado" src="" style="max-width:100%; border-radius:12px;">
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+    // ============ BLOQUEIO DE FUNDO QUANDO UM MODAL ESTÁ ABERTO ============
+    (function agnailInicializarBloqueioFundo() {
+        function overlayEstaAberta(ov) {
+            if (ov.classList.contains('show') || ov.classList.contains('active')) return true;
+            const display = ov.style.display || getComputedStyle(ov).display;
+            return display && display !== 'none';
+        }
+        function atualizar() {
+            const algumaAberta = Array.from(document.querySelectorAll('.overlay')).some(overlayEstaAberta);
+            document.body.classList.toggle('agnail-modal-aberto', algumaAberta);
+        }
+        const observer = new MutationObserver(atualizar);
+        function observarTodas() {
+            document.querySelectorAll('.overlay').forEach(ov => {
+                observer.observe(ov, { attributes: true, attributeFilter: ['class', 'style'] });
+            });
+        }
+        observarTodas();
+        new MutationObserver(() => { observarTodas(); atualizar(); })
+            .observe(document.body, { childList: true });
+        atualizar();
+    })();
+</script>
+<script src="admin-sistema.js"></script>
+</body>
+</html>

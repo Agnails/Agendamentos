@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>Agnail - Cobrança</title>
+<link rel="icon" href="assets/logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --bg:#fdf6f9; --card:#ffffff; --rosa:#e4a5b8; --rosa-escuro:#c47d8f; --rosa-claro:#fbeaef;
+        --lilas:#d5c3e0; --lilas-claro:#f3ecf8; --verde:#b5d8c3; --verde-escuro:#7dab8e;
+        --vermelho:#e8b4b8; --vermelho-escuro:#c48d92; --texto:#5d4a5c; --texto-claro:#8a7a89;
+        --sombra:0 4px 20px rgba(180,150,170,0.15); --sombra-lg:0 12px 40px rgba(180,150,170,0.2);
+        --radius:20px; --radius-sm:12px; --transition:0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+        font-family:'Nunito', system-ui, sans-serif; background:var(--bg); color:var(--texto);
+        min-height:100vh; padding:24px 16px;
+        background-image: radial-gradient(ellipse at 20% 20%, rgba(228,165,184,0.08) 0%, transparent 50%),
+                           radial-gradient(ellipse at 80% 60%, rgba(213,195,224,0.08) 0%, transparent 50%);
+        background-attachment: fixed;
+    }
+    .container { max-width:460px; margin:0 auto; }
+    .header { text-align:center; margin-bottom:20px; }
+    .logo { width:64px; height:64px; border-radius:50%; background:var(--rosa-claro); display:flex; align-items:center;
+        justify-content:center; margin:0 auto 10px; font-size:26px; color:var(--rosa-escuro); box-shadow:var(--sombra); border:3px solid white; }
+    .header h1 { font-family:'Playfair Display', serif; font-size:1.4rem; font-weight:500; }
+    .card { background:var(--card); border-radius:var(--radius); box-shadow:var(--sombra); padding:24px 20px; margin-bottom:16px; }
+
+    .status-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:700; margin-bottom:14px; }
+    .status-expirado { background:#fbe3e6; color:var(--vermelho-escuro); }
+    .status-aguardando { background:#fdf3d6; color:#a9821f; }
+    .status-exclusao { background:#f0e6e6; color:#8a5a5a; }
+
+    .valor { text-align:center; margin:10px 0 18px; }
+    .valor .num { font-family:'Playfair Display', serif; font-size:2.1rem; color:var(--rosa-escuro); font-weight:600; }
+    .valor .label { color:var(--texto-claro); font-size:0.85rem; }
+
+    .pix-box { background:var(--rosa-claro); border-radius:var(--radius-sm); padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
+    .pix-box .chave { font-family: monospace; font-size:0.92rem; word-break:break-all; }
+    .pix-box button { flex-shrink:0; border:none; background:var(--rosa-escuro); color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem; font-weight:600; }
+
+    .upload-area { border:2px dashed #e0c9d2; border-radius:var(--radius-sm); padding:22px; text-align:center; cursor:pointer; transition:var(--transition); margin-bottom:14px; }
+    .upload-area:hover { border-color:var(--rosa); background:var(--rosa-claro); }
+    .upload-area i { font-size:1.8rem; color:var(--rosa-escuro); margin-bottom:8px; display:block; }
+    .upload-area span { font-size:0.85rem; color:var(--texto-claro); }
+    .preview-comprovante { display:none; margin-bottom:14px; text-align:center; }
+    .preview-comprovante img { max-width:100%; max-height:220px; border-radius:var(--radius-sm); box-shadow:var(--sombra); }
+    .preview-comprovante.show { display:block; }
+
+    .btn { width:100%; padding:14px; border:none; border-radius:var(--radius-sm); font-family:'Nunito',sans-serif; font-weight:600; font-size:0.95rem; cursor:pointer; transition:var(--transition); }
+    .btn-primario { background:var(--rosa-escuro); color:#fff; }
+    .btn-primario:hover { background:var(--rosa); }
+    .btn-primario:disabled { opacity:0.5; cursor:not-allowed; }
+    .btn-whatsapp { background:#25D366; color:#fff; margin-top:10px; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-whatsapp:hover { opacity:0.9; }
+    .btn-sair { background:transparent; color:var(--texto-claro); text-decoration:underline; font-size:0.82rem; margin-top:6px; }
+
+    .info-linha { display:flex; justify-content:space-between; font-size:0.85rem; padding:8px 0; border-bottom:1px solid #f0e6ea; }
+    .info-linha:last-child { border-bottom:none; }
+    .info-linha .lbl { color:var(--texto-claro); }
+
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(100px); background:var(--texto); color:#fff;
+        padding:12px 20px; border-radius:12px; font-size:0.88rem; opacity:0; transition:var(--transition); z-index:200; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast.sucesso { background: var(--verde-escuro); }
+    .toast.erro { background: var(--vermelho-escuro); }
+
+    .overlay { position:fixed; inset:0; background:rgba(93,74,92,0.45); display:none; align-items:center; justify-content:center; padding:20px; z-index:100; }
+    .overlay.show { display:flex; }
+    .modal { background:var(--card); border-radius:var(--radius); padding:28px 24px; max-width:380px; width:100%; text-align:center; box-shadow:var(--sombra-lg); }
+    .modal .icone { font-size:2.2rem; margin-bottom:10px; color: var(--verde-escuro); }
+    .modal h2 { font-family:'Playfair Display', serif; font-size:1.2rem; margin-bottom:8px; }
+    .modal p { color:var(--texto-claro); font-size:0.88rem; line-height:1.5; margin-bottom:6px; }
+
+    .carregando-tela { text-align:center; padding:60px 20px; color:var(--texto-claro); }
+    .spinner { width:22px; height:22px; border:3px solid var(--rosa-claro); border-top-color:var(--rosa-escuro); border-radius:50%; display:inline-block; animation:girar 0.8s linear infinite; margin-bottom:10px; }
+    @keyframes girar { to { transform:rotate(360deg); } }
+    .escondido { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="logo"><i class="fa-solid fa-spa"></i></div>
+        <h1>Agnail</h1>
+    </div>
+
+    <div id="telaCarregando" class="carregando-tela">
+        <span class="spinner"></span>
+        <p>Verificando sua assinatura...</p>
+    </div>
+
+    <div id="conteudoPrincipal" class="escondido">
+        <div class="card" id="cardStatus">
+            <span class="status-badge" id="badgeStatus"></span>
+            <p id="msgStatus" style="font-size:0.88rem; color:var(--texto-claro); line-height:1.5;"></p>
+        </div>
+
+        <div class="card" id="cardPagamento">
+            <div class="valor">
+                <div class="num" id="valorMensalidade">R$ 50,00</div>
+                <div class="label">mensalidade</div>
+            </div>
+
+            <div class="pix-box">
+                <span class="chave" id="chavePixTexto">-</span>
+                <button id="btnCopiarPix">Copiar</button>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span>Toque para enviar o comprovante</span>
+                <input type="file" id="inputComprovante" accept="image/*" style="display:none;">
+            </div>
+            <div class="preview-comprovante" id="previewComprovante">
+                <img id="imgComprovante" src="" alt="Comprovante">
+            </div>
+
+            <button class="btn btn-primario" id="btnEnviarComprovante" disabled>Enviar comprovante</button>
+            <button class="btn btn-sair" id="btnSair">Sair da conta</button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="overlayConfirmacao">
+    <div class="modal">
+        <div class="icone"><i class="fa-solid fa-circle-check"></i></div>
+        <h2>Comprovante enviado!</h2>
+        <p>Assim que for aprovado, seu acesso será liberado automaticamente. Envie também pelo WhatsApp para agilizar a análise.</p>
+        <p style="font-size:0.8rem; color:var(--texto-claro);">Se você já enviou a notificação pelo WhatsApp, pode desconsiderar este aviso.</p>
+        <button class="btn btn-whatsapp" id="btnWhatsapp"><i class="fa-brands fa-whatsapp"></i> Enviar pelo WhatsApp</button>
+        <button class="btn btn-primario" id="btnFecharConfirmacao" style="margin-top:10px;">Ok, entendi</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function () {
+    let usuarioAtual = null;
+    let configSistemaAtual = null;
+    let arquivoSelecionado = null;
+
+    function mostrarToast(msg, tipo) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast ' + (tipo || '');
+        void t.offsetWidth;
+        t.classList.add('show');
+        clearTimeout(t._timeout);
+        t._timeout = setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function configurarBadge(status) {
+        const badge = document.getElementById('badgeStatus');
+        const msg = document.getElementById('msgStatus');
+        const cardPagamento = document.getElementById('cardPagamento');
+
+        if (status === 'aguardando_aprovacao') {
+            badge.className = 'status-badge status-aguardando';
+            badge.textContent = 'Aguardando aprovação';
+            msg.textContent = 'Recebemos seu comprovante e ele está em análise. Você pode enviar um novo comprovante caso precise.';
+        } else if (status === 'exclusao_solicitada') {
+            badge.className = 'status-badge status-exclusao';
+            badge.textContent = 'Conta em exclusão';
+            msg.textContent = 'Sua conta está marcada para exclusão. Faça login novamente para restaurá-la automaticamente, ou aguarde a exclusão definitiva.';
+            cardPagamento.classList.add('escondido');
+        } else {
+            badge.className = 'status-badge status-expirado';
+            badge.textContent = 'Assinatura expirada';
+            msg.textContent = 'Seu período de teste ou assinatura expirou. Envie o comprovante de pagamento para reativar o acesso ao painel.';
+        }
+    }
+
+    async function iniciar() {
+        Agnail.onAuthChange(async function (user) {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            usuarioAtual = user;
+
+            const assinatura = await Agnail.getAssinatura(user.uid);
+            const statusAcesso = Agnail.calcularStatusAcesso(assinatura);
+
+            if (statusAcesso.acessoLiberado) {
+                window.location.href = 'manicures.html';
+                return;
+            }
+
+            configSistemaAtual = await Agnail.getConfigSistema();
+            document.getElementById('valorMensalidade').textContent =
+                'R$ ' + Number(configSistemaAtual.mensalidade || 50).toFixed(2).replace('.', ',');
+            document.getElementById('chavePixTexto').textContent = configSistemaAtual.chavePix || 'Chave não configurada';
+
+            configurarBadge(statusAcesso.status);
+
+            document.getElementById('telaCarregando').classList.add('escondido');
+            document.getElementById('conteudoPrincipal').classList.remove('escondido');
+        });
+    }
+
+    document.getElementById('btnCopiarPix').addEventListener('click', function () {
+        const texto = document.getElementById('chavePixTexto').textContent;
+        navigator.clipboard.writeText(texto).then(() => mostrarToast('Chave PIX copiada!', 'sucesso'))
+            .catch(() => mostrarToast('Não foi possível copiar.', 'erro'));
+    });
+
+    document.getElementById('uploadArea').addEventListener('click', function () {
+        document.getElementById('inputComprovante').click();
+    });
+
+    document.getElementById('inputComprovante').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        arquivoSelecionado = file;
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            document.getElementById('imgComprovante').src = ev.target.result;
+            document.getElementById('previewComprovante').classList.add('show');
+            document.getElementById('btnEnviarComprovante').disabled = false;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('btnEnviarComprovante').addEventListener('click', async function () {
+        if (!arquivoSelecionado || !usuarioAtual) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+        try {
+            await Agnail.enviarComprovante(usuarioAtual.uid, arquivoSelecionado);
+            configurarBadge('aguardando_aprovacao');
+            const numero = (configSistemaAtual.whatsappFinanceiro || '').replace(/\D/g, '');
+            document.getElementById('btnWhatsapp').onclick = function () {
+                window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent('Olá! Acabei de enviar o comprovante de pagamento no painel Agnail.'), '_blank');
+            };
+            document.getElementById('overlayConfirmacao').classList.add('show');
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Erro ao enviar comprovante. Tente novamente.', 'erro');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Enviar comprovante';
+        }
+    });
+
+    document.getElementById('btnFecharConfirmacao').addEventListener('click', function () {
+        if (confirm('Você ainda não enviou o comprovante pelo WhatsApp. Deseja realmente sair sem enviar?\n\nSe você já enviou a notificação pelo WhatsApp, pode desconsiderar este aviso.')) {
+            document.getElementById('overlayConfirmacao').classList.remove('show');
+        }
+    });
+
+    document.getElementById('btnSair').addEventListener('click', async function () {
+        await Agnail.logout();
+        window.location.href = 'login.html';
+    });
+
+    iniciar();
+})();
+</script>
+</body>
+</html>

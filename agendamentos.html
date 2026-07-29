@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Agnail - Agendamento</title>
+    <link rel="icon" href="assets/logo.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="termos-conteudo.js"></script>
+    <style>
+        :root {
+            --bg: #fdf6f9;
+            --card: #ffffff;
+            --rosa: #e4a5b8;
+            --rosa-escuro: #c47d8f;
+            --rosa-claro: #fbeaef;
+            --lilas: #d5c3e0;
+            --lilas-claro: #f3ecf8;
+            --bege: #f5ece3;
+            --nude: #efe3d8;
+            --verde: #b5d8c3;
+            --verde-escuro: #7dab8e;
+            --vermelho: #e8b4b8;
+            --vermelho-escuro: #c48d92;
+            --texto: #5d4a5c;
+            --texto-claro: #8a7a89;
+            --sombra: 0 4px 20px rgba(180, 150, 170, 0.15);
+            --sombra-lg: 0 12px 40px rgba(180, 150, 170, 0.2);
+            --radius: 20px;
+            --radius-sm: 12px;
+            --radius-xs: 8px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--texto);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            background-image:
+                radial-gradient(ellipse at 20% 20%, rgba(228, 165, 184, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 60%, rgba(213, 195, 224, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(245, 236, 227, 0.15) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 16px 16px;
+        }
+        .header-logo {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: var(--rosa-claro);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 32px;
+            color: var(--rosa-escuro);
+            box-shadow: var(--sombra);
+            border: 3px solid white;
+            overflow: hidden;
+        }
+        .header-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--texto);
+            letter-spacing: -0.3px;
+        }
+        .header .slogan {
+            font-size: 0.85rem;
+            color: var(--texto-claro);
+            font-weight: 400;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .calendario-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 18px 14px;
+            box-shadow: var(--sombra);
+            margin-bottom: 12px;
+            border: 1px solid rgba(228, 165, 184, 0.12);
+        }
+        .calendario-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .calendario-header button {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: none;
+            background: var(--rosa-claro);
+            color: var(--rosa-escuro);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+        .calendario-header button:hover {
+            background: var(--rosa);
+            color: white;
+            transform: scale(1.05);
+        }
+        .calendario-header button:active {
+            transform: scale(0.95);
+        }
+        .calendario-mes {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--texto);
+            letter-spacing: 0.3px;
+            text-transform: capitalize;
+        }
+        .dias-semana {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--texto-claro);
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .dias-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            text-align: center;
+        }
+        .dia-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            border: 2px solid transparent;
+            background: transparent;
+            color: var(--texto);
+            touch-action: manipulation;
+            min-height: 40px;
+        }
+        .dia-cell.fora-range {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+        .dia-cell.outro-mes {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+        .dia-cell.hoje {
+            border: 2px solid var(--rosa);
+            font-weight: 700;
+        }
+        .dia-cell.disponivel {
+            background: #eaf7ef;
+            color: var(--verde-escuro);
+            font-weight: 600;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .dia-cell.disponivel:hover {
+            background: var(--verde);
+            color: #3d6b4a;
+            transform: scale(1.08);
+            box-shadow: 0 4px 14px rgba(181, 216, 195, 0.5);
+            border-color: var(--verde-escuro);
+        }
+        .dia-cell.indisponivel {
+            background: #fef0f1;
+            color: var(--vermelho-escuro);
+            cursor: pointer;
+            border: 2px solid transparent;
+            font-weight: 500;
+        }
+        .dia-cell.indisponivel:hover {
+            background: var(--vermelho);
+            transform: scale(1.05);
+        }
+        .dia-cell.selecionado {
+            background: var(--rosa) !important;
+            color: white !important;
+            border-color: var(--rosa-escuro) !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 16px rgba(196, 125, 143, 0.45);
+            animation: pulseSelect 0.4s ease;
+        }
+        @keyframes pulseSelect {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.12); }
+        }
+        .legenda {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 12px;
+            font-size: 0.7rem;
+            color: var(--texto-claro);
+            flex-wrap: wrap;
+        }
+        .legenda span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .bolinha {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .bolinha.verde { background: var(--verde); }
+        .bolinha.vermelha { background: var(--vermelho); }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(80, 50, 60, 0.35);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            animation: fadeIn 0.25s ease;
+        }
+        .overlay.active {
+            display: flex;
+        }
+
+        /* Bloqueia interação e rolagem do conteúdo de fundo enquanto um modal está aberto */
+        body.agnail-modal-aberto {
+            overflow: hidden;
+        }
+        body.agnail-modal-aberto > *:not(.overlay) {
+            pointer-events: none;
+            user-select: none;
+        }
+        body.agnail-modal-aberto > .overlay {
+            pointer-events: auto;
+            user-select: auto;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 20px 16px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: var(--sombra-lg);
+            position: relative;
+            animation: slideUp 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid rgba(228, 165, 184, 0.1);
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-fechar {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: none;
+            background: var(--rosa-claro);
+            color: var(--rosa-escuro);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+        .modal-fechar:hover {
+            background: var(--rosa);
+            color: white;
+        }
+        .modal h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            color: var(--texto);
+            margin-bottom: 4px;
+            text-align: center;
+            font-weight: 500;
+        }
+        .modal .subtitulo {
+            text-align: center;
+            color: var(--texto-claro);
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
+        .horarios-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .horario-btn {
+            padding: 12px 4px;
+            border-radius: var(--radius-xs);
+            border: 2px solid #e8dfe4;
+            background: #fdfafb;
+            cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: var(--texto);
+            transition: var(--transition);
+            text-align: center;
+            touch-action: manipulation;
+        }
+        .horario-btn.livre:hover {
+            border-color: var(--verde);
+            background: #eaf7ef;
+            color: var(--verde-escuro);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(181, 216, 195, 0.4);
+        }
+        .horario-btn.ocupado {
+            background: #fef0f1;
+            border-color: #f5d5d8;
+            color: #c48d92;
+            cursor: not-allowed;
+            opacity: 0.7;
+            text-decoration: line-through;
+        }
+        .horario-btn.selecionado-horario {
+            background: var(--rosa) !important;
+            border-color: var(--rosa-escuro) !important;
+            color: white !important;
+            font-weight: 700 !important;
+            text-decoration: none !important;
+            opacity: 1 !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 14px rgba(196, 125, 143, 0.4);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--texto);
+            margin-bottom: 4px;
+            letter-spacing: 0.2px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: var(--radius-xs);
+            border: 2px solid #e8dfe4;
+            background: #fdfafb;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.95rem;
+            color: var(--texto);
+            transition: var(--transition);
+            resize: vertical;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--rosa);
+            box-shadow: 0 0 0 4px rgba(228, 165, 184, 0.12);
+            background: #fff;
+        }
+        .form-group textarea {
+            min-height: 60px;
+        }
+        .servico-check {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: var(--radius-xs);
+            border: 2px solid #e8dfe4;
+            background: #fdfafb;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .servico-check:hover {
+            border-color: var(--lilas);
+            background: var(--lilas-claro);
+        }
+        .servico-check.selecionado {
+            border-color: var(--rosa);
+            background: var(--rosa-claro);
+            font-weight: 600;
+        }
+        .servico-check input {
+            display: none;
+        }
+        .servico-check .check-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 2px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+            font-size: 0.7rem;
+            color: transparent;
+        }
+        .servico-check.selecionado .check-indicator {
+            background: var(--rosa);
+            border-color: var(--rosa-escuro);
+            color: white;
+        }
+        .valor-total {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--rosa-escuro);
+            padding: 10px;
+            background: var(--rosa-claro);
+            border-radius: var(--radius-xs);
+            margin: 10px 0;
+            letter-spacing: 0.5px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 13px 28px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            letter-spacing: 0.3px;
+            text-align: center;
+            width: 100%;
+            touch-action: manipulation;
+        }
+        .btn-primario {
+            background: var(--rosa);
+            color: white;
+            box-shadow: 0 4px 16px rgba(196, 125, 143, 0.35);
+        }
+        .btn-primario:hover {
+            background: #d593a6;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(196, 125, 143, 0.45);
+        }
+        .btn-primario:active {
+            transform: scale(0.97);
+        }
+        .btn-primario:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-secundario {
+            background: white;
+            color: var(--rosa-escuro);
+            border: 2px solid var(--rosa);
+        }
+        .btn-secundario:hover {
+            background: var(--rosa-claro);
+        }
+        .btn-whatsapp {
+            background: #25D366;
+            color: white;
+            box-shadow: 0 4px 16px rgba(37, 211, 102, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-whatsapp:hover {
+            background: #20ba5a;
+            transform: translateY(-2px);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #3d3d3d;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            z-index: 9999;
+            transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            max-width: 90%;
+            text-align: center;
+            pointer-events: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.sucesso {
+            background: #7dab8e;
+        }
+        .toast.erro {
+            background: #c48d92;
+        }
+
+        .info-dia {
+            text-align: center;
+            font-weight: 600;
+            color: var(--texto);
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+        .sem-horarios {
+            text-align: center;
+            color: var(--texto-claro);
+            padding: 20px;
+            font-style: italic;
+        }
+
+        .contador-char {
+            text-align: right;
+            font-size: 0.75rem;
+            color: var(--texto-claro);
+            margin-top: 2px;
+        }
+
+        #grupoEndereco {
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .header { padding: 12px 8px; }
+            .header-logo { width: 64px; height: 64px; font-size: 28px; }
+            .calendario-card { padding: 14px 10px; }
+            .dia-cell { font-size: 0.8rem; min-height: 36px; }
+            .horarios-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+            .horario-btn { padding: 10px 2px; font-size: 0.8rem; }
+            .modal { padding: 16px 12px; }
+            .servico-check { padding: 8px 12px; font-size: 0.85rem; }
+            .toast {
+                top: 10px;
+                font-size: 0.75rem;
+                padding: 10px 18px;
+                white-space: normal;
+                max-width: 92%;
+            }
+        }
+    </style>
+    <style>
+        body.agnail-carregando > .container { display: none !important; }
+        #agnailAuthGate {
+            position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center;
+            justify-content: center; flex-direction: column; z-index: 999; gap: 12px; text-align: center; padding: 20px;
+        }
+        #agnailAuthGate .spinner {
+            width: 26px; height: 26px; border: 3px solid var(--rosa-claro); border-top-color: var(--rosa-escuro);
+            border-radius: 50%; animation: agnailGirar 0.8s linear infinite;
+        }
+        @keyframes agnailGirar { to { transform: rotate(360deg); } }
+        #agnailAuthGate p { color: var(--texto-claro); font-size: 0.9rem; }
+        #agnailAuthGate.erro .spinner { display: none; }
+        #agnailAuthGate.erro i { font-size: 2rem; color: var(--rosa-escuro); margin-bottom: 6px; }
+    </style>
+</head>
+<body class="agnail-carregando">
+<div id="agnailAuthGate">
+    <span class="spinner"></span>
+    <p>Carregando agenda...</p>
+</div>
+
+<!-- Termos de Uso e Política de Privacidade (bloqueia acesso até aceitar) -->
+<div class="overlay" id="overlayTermosCliente" style="z-index:400;">
+    <div class="modal" style="max-width:520px;">
+        <div id="conteudoTermosCliente" style="font-size:0.86rem; line-height:1.6; color:var(--texto); max-height:52vh; overflow-y:auto; padding-right:4px;"></div>
+        <label style="display:flex; align-items:flex-start; gap:8px; margin-top:16px; font-size:0.85rem; cursor:pointer;">
+            <input type="checkbox" id="checkAceiteTermosCliente" style="margin-top:3px;">
+            <span>Li e aceito os Termos de Uso e a Política de Privacidade.</span>
+        </label>
+        <button class="btn btn-rosa" id="btnAceitarTermosCliente" style="width:100%; margin-top:14px;" disabled>Continuar</button>
+    </div>
+</div>
+
+<div class="container">
+    <header class="header">
+        <div class="header-logo" id="headerLogo"><i class="fa-solid fa-spa"></i></div>
+        <h1 id="headerNome">Agnail</h1>
+        <p class="slogan" id="headerSlogan">Agendamento inteligente</p>
+    </header>
+
+    <div class="calendario-card" id="calendarioCard">
+        <div class="calendario-header">
+            <button id="btnMesAnterior" title="Mês anterior"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="calendario-mes" id="calendarioMes"></span>
+            <button id="btnMesSeguinte" title="Mês seguinte"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="dias-semana">
+            <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+        </div>
+        <div class="dias-grid" id="diasGrid"></div>
+        <div class="legenda">
+            <span><span class="bolinha verde"></span> Disponível</span>
+            <span><span class="bolinha vermelha"></span> Indisponível / Folga</span>
+        </div>
+    </div>
+    <p style="text-align:center;color:var(--texto-claro);font-size:0.75rem;margin-top:4px;">
+        Selecione uma data para ver os horários disponíveis
+    </p>
+</div>
+
+<!-- Modal Horários -->
+<div class="overlay" id="overlayHorarios">
+    <div class="modal" id="modalHorarios">
+        <button class="modal-fechar" id="fecharHorarios"><i class="fa-solid fa-xmark"></i></button>
+        <h3>Horários Disponíveis</h3>
+        <p class="subtitulo" id="subtituloHorarios"></p>
+        <div class="horarios-grid" id="horariosGrid"></div>
+        <div class="sem-horarios" id="semHorarios" style="display:none;">Nenhum horário disponível nesta data.</div>
+        <button class="btn btn-secundario" style="margin-top:14px;" id="btnVoltarHorarios">Voltar</button>
+    </div>
+</div>
+
+<!-- Modal Indisponível -->
+<div class="overlay" id="overlayIndisponivel">
+    <div class="modal" id="modalIndisponivel" style="text-align:center;">
+        <button class="modal-fechar" id="fecharIndisponivel"><i class="fa-solid fa-xmark"></i></button>
+        <div style="font-size:3rem;margin-bottom:10px;">😔</div>
+        <h3>Indisponível</h3>
+        <p id="msgIndisponivel" style="color:var(--texto-claro);margin-bottom:16px;"></p>
+        <button class="btn btn-secundario" id="btnOkIndisponivel">Entendi</button>
+    </div>
+</div>
+
+<!-- Modal Formulário -->
+<div class="overlay" id="overlayForm">
+    <div class="modal" id="modalForm" style="max-width:460px;">
+        <button class="modal-fechar" id="fecharForm"><i class="fa-solid fa-xmark"></i></button>
+        <h3>Agendar Atendimento</h3>
+        <p class="subtitulo" id="subtituloForm"></p>
+        <form id="formAgendamento" autocomplete="off">
+            <div class="form-group">
+                <label><i class="fa-solid fa-user"></i> Nome da Cliente</label>
+                <input type="text" id="inputNome" placeholder="Seu nome completo" maxlength="100" required>
+            </div>
+            <div class="form-group">
+                <label><i class="fa-brands fa-whatsapp"></i> Telefone (WhatsApp)</label>
+                <input type="tel" id="inputTelefone" placeholder="(11) 99999-9999" required maxlength="16">
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-house"></i> Tipo de Atendimento</label>
+                <select id="inputTipoAtendimento" required>
+                    <option value="No local">No local</option>
+                    <option value="A domicílio">A domicílio</option>
+                </select>
+            </div>
+            <div class="form-group" id="grupoEndereco">
+                <label><i class="fa-solid fa-map-pin"></i> Endereço</label>
+                <input type="text" id="inputEndereco" placeholder="Rua, número, bairro, complemento" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-spa"></i> Serviços Desejados</label>
+                <div id="servicosContainer"></div>
+                <div style="font-size:0.8rem;color:var(--texto-claro);margin-top:4px;">
+                    <span id="tempoTotalInfo">Tempo estimado: 0 min</span>
+                </div>
+            </div>
+            <div class="valor-total" id="valorTotal">Total: R$ 0,00</div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-credit-card"></i> Forma de Pagamento</label>
+                <select id="inputPagamento" required></select>
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-note-sticky"></i> Observações</label>
+                <textarea id="inputObs" placeholder="Alguma observação? (opcional)" maxlength="100"></textarea>
+                <div class="contador-char"><span id="charCount">0</span>/100</div>
+            </div>
+            <input type="hidden" id="inputData">
+            <input type="hidden" id="inputHorario">
+            <div id="disponibilidadeMsg" style="font-size:0.85rem;text-align:center;margin:6px 0;color:var(--verde-escuro);"></div>
+            <button type="submit" class="btn btn-primario" id="btnConfirmar" disabled>
+                <i class="fa-solid fa-check-circle"></i> Confirmar Agendamento
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Confirmação -->
+<div class="overlay" id="overlayConfirmacao">
+    <div class="modal" id="modalConfirmacao" style="text-align:center;">
+        <button class="modal-fechar" id="fecharConfirmacao"><i class="fa-solid fa-xmark"></i></button>
+        <div style="font-size:3.5rem;margin-bottom:10px;">✨</div>
+        <h3>Agendamento Confirmado!</h3>
+        <p id="msgConfirmacao" style="color:var(--texto-claro);margin-bottom:12px;"></p>
+        <p style="font-size:0.85rem;color:var(--texto-claro);margin-bottom:16px;">
+            Envie uma notificação via WhatsApp para a manicure para finalizar.
+        </p>
+        <p style="font-size:0.8rem;color:var(--texto-claro);margin-bottom:16px;">
+            Se você já enviou a notificação pelo WhatsApp, pode desconsiderar o aviso ao fechar esta janela.
+        </p>
+        <a id="linkWhatsApp" href="#" target="_blank" class="btn btn-whatsapp" style="display:flex;text-decoration:none;">
+            <i class="fa-brands fa-whatsapp fa-lg"></i> Enviar para WhatsApp
+        </a>
+        <button class="btn btn-secundario" style="margin-top:10px;" id="btnFecharConfirmacao">Fechar</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div style="text-align:center; padding:16px 10px 90px; font-size:0.75rem;">
+    <a href="#" id="linkConsultarTermosCliente" style="color:var(--texto-claro); text-decoration:underline;">Termos de Uso e Política de Privacidade</a>
+</div>
+
+<script>
+    // ============ BLOQUEIO DE FUNDO QUANDO UM MODAL ESTÁ ABERTO ============
+    (function agnailInicializarBloqueioFundo() {
+        function overlayEstaAberta(ov) {
+            if (ov.classList.contains('active')) return true;
+            const display = ov.style.display || getComputedStyle(ov).display;
+            return display && display !== 'none';
+        }
+        function atualizar() {
+            const algumaAberta = Array.from(document.querySelectorAll('.overlay')).some(overlayEstaAberta);
+            document.body.classList.toggle('agnail-modal-aberto', algumaAberta);
+        }
+        const observer = new MutationObserver(atualizar);
+        function observarTodas() {
+            document.querySelectorAll('.overlay').forEach(ov => {
+                observer.observe(ov, { attributes: true, attributeFilter: ['class', 'style'] });
+            });
+        }
+        observarTodas();
+        new MutationObserver(() => { observarTodas(); atualizar(); })
+            .observe(document.body, { childList: true });
+        atualizar();
+    })();
+
+    (async function() {
+        // ============ TEMA ============
+        // O tema exibido aqui é o escolhido pela MANICURE (salvo no
+        // Firestore, campo "tema" da configuração dela) — não uma
+        // preferência do dispositivo do cliente. É aplicado logo após a
+        // configuração da manicure ser carregada, mais abaixo.
+        const TEMAS = [
+            { id: 'rosa', cores: { bg: '#fdf6f9', card: '#ffffff', rosa: '#e4a5b8', rosaEscuro: '#c47d8f', rosaClaro: '#fbeaef', lilas: '#d5c3e0', lilasClaro: '#f3ecf8', bege: '#f5ece3', nude: '#efe3d8', verde: '#b5d8c3', verdeEscuro: '#7dab8e', vermelho: '#e8b4b8', vermelhoEscuro: '#c48d92', texto: '#5d4a5c', textoClaro: '#8a7a89' } },
+            { id: 'lilas', cores: { bg: '#f8f5fc', card: '#ffffff', rosa: '#d5c3e0', rosaEscuro: '#b89fc9', rosaClaro: '#f3ecf8', lilas: '#c9b8d4', lilasClaro: '#f0eaf5', bege: '#f5f0f0', nude: '#ede6e6', verde: '#b5d8c3', verdeEscuro: '#7dab8e', vermelho: '#e8b4b8', vermelhoEscuro: '#c48d92', texto: '#4a3e4a', textoClaro: '#7a6e7a' } },
+            { id: 'menta', cores: { bg: '#f2faf5', card: '#ffffff', rosa: '#b5d8c3', rosaEscuro: '#7dab8e', rosaClaro: '#eaf7ef', lilas: '#c9d8d0', lilasClaro: '#e8f2ec', bege: '#f5ece3', nude: '#efe3d8', verde: '#b5d8c3', verdeEscuro: '#3d6b4a', vermelho: '#e8b4b8', vermelhoEscuro: '#c48d92', texto: '#2d4a3a', textoClaro: '#5a7a6a' } },
+            { id: 'azul', cores: { bg: '#f2f8fc', card: '#ffffff', rosa: '#a8c8e0', rosaEscuro: '#6f9dc0', rosaClaro: '#e6f1f8', lilas: '#c3d4e0', lilasClaro: '#ecf3f8', bege: '#f5ece3', nude: '#efe3d8', verde: '#b5d8c3', verdeEscuro: '#7dab8e', vermelho: '#e8b4b8', vermelhoEscuro: '#c48d92', texto: '#2d3e4a', textoClaro: '#5a6e7a' } }
+        ];
+
+        function aplicarTemaIndex(temaId) {
+            const tema = TEMAS.find(t => t.id === temaId) || TEMAS[0];
+            const c = tema.cores;
+            document.documentElement.style.setProperty('--bg', c.bg);
+            document.documentElement.style.setProperty('--card', c.card);
+            document.documentElement.style.setProperty('--rosa', c.rosa);
+            document.documentElement.style.setProperty('--rosa-escuro', c.rosaEscuro);
+            document.documentElement.style.setProperty('--rosa-claro', c.rosaClaro);
+            document.documentElement.style.setProperty('--lilas', c.lilas);
+            document.documentElement.style.setProperty('--lilas-claro', c.lilasClaro);
+            document.documentElement.style.setProperty('--bege', c.bege);
+            document.documentElement.style.setProperty('--nude', c.nude);
+            document.documentElement.style.setProperty('--verde', c.verde);
+            document.documentElement.style.setProperty('--verde-escuro', c.verdeEscuro);
+            document.documentElement.style.setProperty('--vermelho', c.vermelho);
+            document.documentElement.style.setProperty('--vermelho-escuro', c.vermelhoEscuro);
+            document.documentElement.style.setProperty('--texto', c.texto);
+            document.documentElement.style.setProperty('--texto-claro', c.textoClaro);
+        }
+
+        // ============ RESOLUÇÃO DA MANICURE (via ?m=uid na URL) ============
+        const parametros = new URLSearchParams(window.location.search);
+        const manicureUid = parametros.get('m');
+
+        if (!manicureUid) {
+            const gate = document.getElementById('agnailAuthGate');
+            gate.classList.add('erro');
+            gate.innerHTML = '<i class="fa-solid fa-link-slash"></i><p>Link inválido. Peça para a manicure compartilhar o link correto de agendamento.</p>';
+            return;
+        }
+
+        const manicureRefPublica = Agnail.manicureRef(manicureUid);
+
+        const [configuracoesRemotas, assinaturaRemota, agendamentosSnap] = await Promise.all([
+            Agnail.getConfiguracoes(manicureUid),
+            Agnail.getAssinatura(manicureUid),
+            manicureRefPublica.collection('agendamentos').get()
+        ]);
+
+        if (!configuracoesRemotas) {
+            const gate = document.getElementById('agnailAuthGate');
+            gate.classList.add('erro');
+            gate.innerHTML = '<i class="fa-solid fa-link-slash"></i><p>Não encontramos esta agenda. O link pode estar incorreto ou a conta pode não existir mais.</p>';
+            return;
+        }
+
+        aplicarTemaIndex(configuracoesRemotas.tema);
+
+        // ============ DISPONIBILIDADE DA CONTA ============
+        // Se o plano da manicure estiver expirado, ou o acesso tiver sido
+        // bloqueado pelo administrador, o link público de agendamento fica
+        // indisponível até a situação ser regularizada.
+        const statusAcessoManicure = Agnail.calcularStatusAcesso(assinaturaRemota);
+        if (!statusAcessoManicure.acessoLiberado) {
+            const gate = document.getElementById('agnailAuthGate');
+            gate.classList.add('erro');
+            gate.innerHTML = '<i class="fa-solid fa-clock"></i><p>Esta agenda está temporariamente indisponível. Entre em contato diretamente com a profissional, ou tente novamente mais tarde.</p>';
+            return;
+        }
+
+        window._agnailCacheAgendamentos = agendamentosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // ============ TERMOS DE USO / POLÍTICA DE PRIVACIDADE (cliente) ============
+        // Como o cliente não faz login, o aceite fica registrado no
+        // navegador (localStorage). Documentos continuam disponíveis para
+        // consulta a qualquer momento (link no rodapé da página).
+        await new Promise((resolve) => {
+            if (localStorage.getItem('agnail_cliente_termos_aceitos') === 'true') { resolve(); return; }
+            document.getElementById('conteudoTermosCliente').innerHTML = window.AGNAIL_TERMOS_HTML || '';
+            const overlay = document.getElementById('overlayTermosCliente');
+            const check = document.getElementById('checkAceiteTermosCliente');
+            const btn = document.getElementById('btnAceitarTermosCliente');
+            const gate = document.getElementById('agnailAuthGate');
+            if (gate) gate.remove();
+            overlay.classList.add('active');
+            check.checked = false;
+            btn.disabled = true;
+            check.onchange = () => { btn.disabled = !check.checked; };
+            btn.onclick = () => {
+                localStorage.setItem('agnail_cliente_termos_aceitos', 'true');
+                overlay.classList.remove('active');
+                resolve();
+            };
+        });
+
+        document.body.classList.remove('agnail-carregando');
+        const gate = document.getElementById('agnailAuthGate');
+        if (gate) gate.remove();
+
+        // ============ DADOS (Firestore) ============
+        function getConfig() {
+            const padrao = {
+                nomeEmpresa: '',
+                slogan: '',
+                whatsapp: '',
+                imagem: '',
+                servicos: [],
+                formasPagamento: [],
+                diasFolga: [],
+                folgas: [],
+                horarioInicio: '',
+                horarioFim: '',
+                intervaloMinutos: 60,
+            };
+            const parsed = { ...configuracoesRemotas };
+            if (parsed.servicos) {
+                parsed.servicos = parsed.servicos.map(s => ({ ...s, duracao: s.duracao || 30 }));
+            }
+            if (!parsed.folgas) parsed.folgas = [];
+            return { ...padrao, ...parsed };
+        }
+
+        function getAgendamentos() {
+            return window._agnailCacheAgendamentos;
+        }
+
+        function salvarAgendamentos(arr) {
+            // Mantido apenas por compatibilidade com o restante do código;
+            // a gravação de fato acontece via Agnail.db diretamente no
+            // momento da confirmação do agendamento (ver mais abaixo).
+            window._agnailCacheAgendamentos = arr;
+        }
+
+        const config = getConfig();
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const rangeInicio = new Date(hoje);
+        const rangeFim = new Date(hoje);
+        rangeFim.setDate(rangeFim.getDate() + 21);
+
+        let mesAtual = hoje.getMonth();
+        let anoAtual = hoje.getFullYear();
+        let diaSelecionado = null;
+        let horarioSelecionado = null;
+        let servicosSelecionados = [];
+
+        // ============ HEADER ============
+        function atualizarHeader() {
+            document.getElementById('headerNome').textContent = config.nomeEmpresa || 'Agnail';
+            document.getElementById('headerSlogan').textContent = config.slogan || '';
+            const logoEl = document.getElementById('headerLogo');
+            if (config.imagem) {
+                logoEl.innerHTML = `<img src="${config.imagem}" alt="Logo">`;
+            } else {
+                logoEl.innerHTML = '<i class="fa-solid fa-spa"></i>';
+            }
+        }
+        atualizarHeader();
+
+        // ============ SLOTS ============
+        function gerarSlots() {
+            const slots = [];
+            const [hIni, mIni] = config.horarioInicio.split(':').map(Number);
+            const [hFim, mFim] = config.horarioFim.split(':').map(Number);
+            const inicioMinutos = hIni * 60 + mIni;
+            const fimMinutos = hFim * 60 + mFim;
+            const intervalo = config.intervaloMinutos || 60;
+            for (let m = inicioMinutos; m + intervalo <= fimMinutos; m += intervalo) {
+                const h = Math.floor(m / 60);
+                const min = m % 60;
+                slots.push(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
+            }
+            return slots;
+        }
+
+        function isFolga(dataStr) {
+            const data = new Date(dataStr + 'T00:00:00');
+            const diaSemana = data.getDay();
+            if ((config.diasFolga || []).includes(diaSemana)) return true;
+            if ((config.folgas || []).includes(dataStr)) return true;
+            return false;
+        }
+
+        function getSlotsOcupados(dataStr) {
+            const agendamentos = getAgendamentos();
+            const slots = gerarSlots();
+            const ocupados = new Set();
+            const interval = config.intervaloMinutos || 60;
+
+            agendamentos.filter(a => a.data === dataStr && (a.status === 'agendado' || a.status === 'concluido'))
+                .forEach(a => {
+                    const inicio = a.horario;
+                    const duracaoTotal = a.duracaoTotal || (a.servicos ? a.servicos.length * 30 : 30);
+                    const numSlots = Math.ceil(duracaoTotal / interval);
+                    const idx = slots.indexOf(inicio);
+                    if (idx !== -1) {
+                        for (let i = 0; i < numSlots && idx + i < slots.length; i++) {
+                            ocupados.add(slots[idx + i]);
+                        }
+                    } else {
+                        ocupados.add(inicio);
+                    }
+                });
+            return ocupados;
+        }
+
+        function getStatusDia(dataStr) {
+            if (isFolga(dataStr)) return 'folga';
+            const slots = gerarSlots();
+            if (slots.length === 0) return 'indisponivel';
+            const ocupados = getSlotsOcupados(dataStr);
+            const livres = slots.filter(s => !ocupados.has(s));
+            return livres.length > 0 ? 'disponivel' : 'indisponivel';
+        }
+
+        function horarioDisponivel(dataStr, horario, duracaoTotal) {
+            const slots = gerarSlots();
+            const interval = config.intervaloMinutos || 60;
+            const numSlots = Math.ceil(duracaoTotal / interval);
+            const idx = slots.indexOf(horario);
+            if (idx === -1) return false;
+            if (idx + numSlots > slots.length) return false;
+            const ocupados = getSlotsOcupados(dataStr);
+            for (let i = 0; i < numSlots; i++) {
+                if (ocupados.has(slots[idx + i])) return false;
+            }
+            return true;
+        }
+
+        // ============ CALENDÁRIO ============
+        function renderizarCalendario() {
+            const diasGrid = document.getElementById('diasGrid');
+            const tituloMes = document.getElementById('calendarioMes');
+            const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+            tituloMes.textContent = `${meses[mesAtual]} de ${anoAtual}`;
+
+            const primeiroDia = new Date(anoAtual, mesAtual, 1);
+            const ultimoDia = new Date(anoAtual, mesAtual + 1, 0);
+            const diaSemanaPrimeiro = primeiroDia.getDay();
+            const totalDias = ultimoDia.getDate();
+            const totalCelulas = diaSemanaPrimeiro + totalDias;
+            const linhas = Math.ceil(totalCelulas / 7);
+            const totalSlots = linhas * 7;
+
+            let html = '';
+            for (let i = 0; i < totalSlots; i++) {
+                const diaNum = i - diaSemanaPrimeiro + 1;
+                const dataCell = new Date(anoAtual, mesAtual, diaNum);
+                const dataStr = `${dataCell.getFullYear()}-${String(dataCell.getMonth()+1).padStart(2,'0')}-${String(dataCell.getDate()).padStart(2,'0')}`;
+                const dataTimestamp = new Date(anoAtual, mesAtual, diaNum);
+                dataTimestamp.setHours(0,0,0,0);
+
+                let classes = ['dia-cell'];
+                let foraRange = false;
+                let outroMes = false;
+
+                if (diaNum < 1 || diaNum > totalDias) {
+                    outroMes = true;
+                    classes.push('outro-mes');
+                }
+                if (dataTimestamp < rangeInicio || dataTimestamp > rangeFim) {
+                    foraRange = true;
+                    if (!outroMes) classes.push('fora-range');
+                }
+
+                const isHoje = dataTimestamp.getTime() === hoje.getTime();
+                if (isHoje && !outroMes) classes.push('hoje');
+
+                if (!outroMes && !foraRange) {
+                    const status = getStatusDia(dataStr);
+                    if (status === 'disponivel') classes.push('disponivel');
+                    else classes.push('indisponivel');
+                }
+
+                if (diaSelecionado === dataStr && !outroMes) {
+                    classes = classes.filter(c => !['disponivel','indisponivel','hoje'].includes(c));
+                    classes.push('selecionado');
+                }
+
+                const displayDia = (diaNum >= 1 && diaNum <= totalDias) ? diaNum : '';
+                const onclick = (!outroMes && !foraRange && displayDia !== '') ? `onclick="window.clicarDia('${dataStr}')"` : '';
+                html += `<div class="${classes.join(' ')}" data-data="${dataStr}" ${onclick} style="cursor:${(!outroMes && !foraRange && displayDia!=='')?'pointer':'default'}">${displayDia}</div>`;
+            }
+            diasGrid.innerHTML = html;
+        }
+
+        window.clicarDia = function(dataStr) {
+            diaSelecionado = dataStr;
+            horarioSelecionado = null;
+            renderizarCalendario();
+            const status = getStatusDia(dataStr);
+            if (status === 'folga' || status === 'indisponivel') {
+                mostrarIndisponivel(dataStr, status);
+            } else {
+                abrirModalHorarios(dataStr);
+            }
+        };
+
+        // ============ MODAL HORÁRIOS ============
+        function abrirModalHorarios(dataStr) {
+            const slots = gerarSlots();
+            const ocupados = getSlotsOcupados(dataStr);
+            const livres = slots.filter(s => !ocupados.has(s));
+
+            const grid = document.getElementById('horariosGrid');
+            const semHorarios = document.getElementById('semHorarios');
+            const subtitulo = document.getElementById('subtituloHorarios');
+            const dataFormatada = new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            subtitulo.textContent = dataFormatada;
+
+            if (livres.length === 0) {
+                grid.innerHTML = '';
+                semHorarios.style.display = 'block';
+            } else {
+                semHorarios.style.display = 'none';
+                grid.innerHTML = slots.map(s => {
+                    const isLivre = livres.includes(s);
+                    const isSelected = (horarioSelecionado === s && diaSelecionado === dataStr);
+                    let cls = 'horario-btn';
+                    if (isSelected) cls += ' selecionado-horario';
+                    else if (!isLivre) cls += ' ocupado';
+                    else cls += ' livre';
+                    const onclick = isLivre ? `onclick="window.selecionarHorario('${s}')"` : `onclick="window.clicarHorarioOcupado('${s}','${dataStr}')"`;
+                    return `<button class="${cls}" ${onclick} ${!isLivre?'disabled':''}>${s}</button>`;
+                }).join('');
+            }
+            document.getElementById('overlayHorarios').classList.add('active');
+        }
+
+        window.selecionarHorario = function(h) {
+            horarioSelecionado = h;
+            document.querySelectorAll('#horariosGrid .horario-btn').forEach(b => b.classList.remove('selecionado-horario'));
+            const botoes = document.querySelectorAll('#horariosGrid .horario-btn');
+            botoes.forEach(b => {
+                if (b.textContent.trim() === h && !b.disabled) b.classList.add('selecionado-horario');
+            });
+            setTimeout(() => {
+                document.getElementById('overlayHorarios').classList.remove('active');
+                abrirFormulario();
+            }, 250);
+        };
+
+        window.clicarHorarioOcupado = function(h, dataStr) {
+            mostrarIndisponivel(dataStr, 'horario_ocupado', h);
+        };
+
+        // ============ MODAL INDISPONÍVEL ============
+        function mostrarIndisponivel(dataStr, motivo, horario) {
+            const msg = document.getElementById('msgIndisponivel');
+            const dataFormatada = new Date(dataStr + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            if (motivo === 'folga') {
+                msg.textContent = `O dia ${dataFormatada} é dia de folga. Por favor, escolha outra data.`;
+            } else if (motivo === 'horario_ocupado') {
+                msg.textContent = `O horário das ${horario} no dia ${dataFormatada} já está ocupado. Por favor, escolha outro horário.`;
+            } else {
+                msg.textContent = `Não há horários disponíveis para o dia ${dataFormatada}. Por favor, escolha outra data.`;
+            }
+            document.getElementById('overlayIndisponivel').classList.add('active');
+        }
+
+        // ============ FORMULÁRIO ============
+        function abrirFormulario() {
+            if (!diaSelecionado || !horarioSelecionado) return;
+            const dataFormatada = new Date(diaSelecionado + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('subtituloForm').textContent = `Data: ${dataFormatada} • Horário: ${horarioSelecionado}`;
+            document.getElementById('inputData').value = diaSelecionado;
+            document.getElementById('inputHorario').value = horarioSelecionado;
+            document.getElementById('inputNome').value = '';
+            document.getElementById('inputTelefone').value = '';
+            document.getElementById('inputObs').value = '';
+            document.getElementById('inputEndereco').value = '';
+            document.getElementById('charCount').textContent = '0';
+            document.getElementById('inputTipoAtendimento').value = 'No local';
+            document.getElementById('grupoEndereco').style.display = 'none';
+            servicosSelecionados = [];
+            renderizarServicos();
+            renderizarFormasPagamento();
+            atualizarValorTotal();
+            document.getElementById('overlayForm').classList.add('active');
+            validarDisponibilidade();
+        }
+
+        document.getElementById('inputTipoAtendimento').addEventListener('change', function() {
+            const grupo = document.getElementById('grupoEndereco');
+            if (this.value === 'A domicílio') {
+                grupo.style.display = 'block';
+            } else {
+                grupo.style.display = 'none';
+                document.getElementById('inputEndereco').value = '';
+            }
+        });
+
+        function renderizarServicos() {
+            const container = document.getElementById('servicosContainer');
+            container.innerHTML = (config.servicos || []).map((s, i) => {
+                const sel = servicosSelecionados.includes(i);
+                return `<div class="servico-check ${sel?'selecionado':''}" onclick="window.toggleServico(${i})">
+                    <span class="check-indicator"><i class="fa-solid fa-check"></i></span>
+                    <span style="flex:1;">${s.nome}</span>
+                    <span style="font-weight:700;color:var(--rosa-escuro);">R$ ${s.valor.toFixed(2)}</span>
+                </div>`;
+            }).join('');
+        }
+
+        window.toggleServico = function(i) {
+            if (servicosSelecionados.includes(i)) {
+                servicosSelecionados = servicosSelecionados.filter(x => x !== i);
+            } else {
+                servicosSelecionados.push(i);
+            }
+            renderizarServicos();
+            atualizarValorTotal();
+            validarDisponibilidade();
+        };
+
+        function renderizarFormasPagamento() {
+            const select = document.getElementById('inputPagamento');
+            select.innerHTML = '<option value="">Selecione...</option>' +
+                (config.formasPagamento || []).map(f => `<option value="${f}">${f}</option>`).join('');
+        }
+
+        function atualizarValorTotal() {
+            const total = servicosSelecionados.reduce((acc, i) => acc + (config.servicos[i]?.valor || 0), 0);
+            document.getElementById('valorTotal').textContent = `Total: R$ ${total.toFixed(2)}`;
+            const tempoTotal = servicosSelecionados.reduce((acc, i) => acc + (config.servicos[i]?.duracao || 0), 0);
+            document.getElementById('tempoTotalInfo').textContent = `Tempo estimado: ${tempoTotal} min`;
+        }
+
+        function validarDisponibilidade() {
+            const data = document.getElementById('inputData').value;
+            const horario = document.getElementById('inputHorario').value;
+            const btn = document.getElementById('btnConfirmar');
+            const msgEl = document.getElementById('disponibilidadeMsg');
+
+            const tempoTotal = servicosSelecionados.reduce((acc, i) => acc + (config.servicos[i]?.duracao || 0), 0);
+            if (!data || !horario || servicosSelecionados.length === 0) {
+                btn.disabled = true;
+                msgEl.textContent = '';
+                return;
+            }
+
+            const disponivel = horarioDisponivel(data, horario, tempoTotal);
+            if (disponivel) {
+                btn.disabled = false;
+                msgEl.textContent = '✅ Horário disponível para a duração selecionada.';
+                msgEl.style.color = 'var(--verde-escuro)';
+            } else {
+                btn.disabled = true;
+                msgEl.textContent = '⛔ Horário indisponível para a duração total dos serviços. Escolha outro horário.';
+                msgEl.style.color = 'var(--vermelho-escuro)';
+            }
+        }
+
+        // ============ MÁSCARA TELEFONE ============
+        function mascaraTelefone(input) {
+            let v = input.value.replace(/\D/g, '');
+            if (v.length > 11) v = v.slice(0,11);
+            let formatted = '';
+            if (v.length > 0) {
+                formatted = '(' + v.slice(0,2);
+                if (v.length >= 3) {
+                    formatted += ') ' + v.slice(2,7);
+                    if (v.length >= 8) {
+                        formatted += '-' + v.slice(7,11);
+                    }
+                }
+            }
+            input.value = formatted;
+        }
+
+        // ============ CONTADOR OBSERVAÇÃO ============
+        document.getElementById('inputObs').addEventListener('input', function() {
+            const max = 100;
+            const len = this.value.length;
+            document.getElementById('charCount').textContent = len;
+            if (len > max) this.value = this.value.slice(0, max);
+        });
+
+        // ============ ENVIAR FORM ============
+        document.getElementById('formAgendamento').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nome = document.getElementById('inputNome').value.trim();
+            const telefone = document.getElementById('inputTelefone').value.replace(/\D/g, '');
+            const pagamento = document.getElementById('inputPagamento').value;
+            const obs = document.getElementById('inputObs').value.trim();
+            const data = document.getElementById('inputData').value;
+            const horario = document.getElementById('inputHorario').value;
+            const tipoAtendimento = document.getElementById('inputTipoAtendimento').value;
+            const endereco = document.getElementById('inputEndereco').value.trim();
+
+            if (!nome || !telefone || !pagamento || servicosSelecionados.length === 0) {
+                mostrarToast('Preencha todos os campos obrigatórios.', 'erro');
+                return;
+            }
+            if (telefone.length < 10) {
+                mostrarToast('Telefone inválido. Use DDD + número.', 'erro');
+                return;
+            }
+            if (tipoAtendimento === 'A domicílio' && !endereco) {
+                mostrarToast('Preencha o endereço para atendimento a domicílio.', 'erro');
+                return;
+            }
+
+            const servicosNomes = servicosSelecionados.map(i => config.servicos[i].nome);
+            const valorTotal = servicosSelecionados.reduce((acc, i) => acc + config.servicos[i].valor, 0);
+            const duracaoTotal = servicosSelecionados.reduce((acc, i) => acc + (config.servicos[i]?.duracao || 0), 0);
+
+            if (!horarioDisponivel(data, horario, duracaoTotal)) {
+                mostrarToast('O horário não está mais disponível para a duração selecionada.', 'erro');
+                validarDisponibilidade();
+                return;
+            }
+
+            const novoAgendamento = {
+                id: 'ag_' + Date.now() + '_' + Math.random().toString(36).substr(2,6),
+                nome,
+                telefone,
+                servicos: servicosNomes,
+                valor: valorTotal,
+                duracaoTotal: duracaoTotal,
+                formaPagamento: pagamento,
+                data,
+                horario,
+                observacoes: obs,
+                tipoAtendimento,
+                endereco: endereco || '',
+                status: 'agendado',
+                criadoEm: new Date().toISOString(),
+            };
+
+            const agendamentos = getAgendamentos();
+            agendamentos.push(novoAgendamento);
+            salvarAgendamentos(agendamentos);
+
+            const { id: novoId, ...dadosAgendamento } = novoAgendamento;
+            manicureRefPublica.collection('agendamentos').doc(novoId).set(dadosAgendamento)
+                .catch(err => console.error('Erro ao salvar agendamento:', err));
+
+            // Upsert do cliente (por telefone) para manter o histórico
+            manicureRefPublica.collection('clientes').doc(telefone).set({
+                nome, telefone,
+                ultimoAgendamento: data,
+                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).catch(err => console.error('Erro ao salvar cliente:', err));
+
+            document.getElementById('overlayForm').classList.remove('active');
+
+            const dataFormatada = new Date(data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('msgConfirmacao').textContent =
+                `${nome}, seu agendamento para ${dataFormatada} às ${horario} foi confirmado!`;
+            document.getElementById('overlayConfirmacao').classList.add('active');
+
+            let msgWhatsApp =
+                `Olá! Gostaria de confirmar meu agendamento:%0A%0A👤 *Nome:* ${nome}%0A📅 *Data:* ${dataFormatada}%0A⏰ *Horário:* ${horario}%0A💅 *Serviços:* ${servicosNomes.join(', ')}%0A💰 *Valor:* R$ ${valorTotal.toFixed(2)}%0A💳 *Pagamento:* ${pagamento}%0A🏠 *Atendimento:* ${tipoAtendimento}`;
+            if (tipoAtendimento === 'A domicílio') {
+                msgWhatsApp += `%0A📍 *Endereço:* ${endereco}`;
+            }
+            msgWhatsApp += `%0A📝 *Obs:* ${obs || 'Nenhuma'}%0A%0A_Agendamento realizado via Agnail_ ✨`;
+            const link = `https://wa.me/${config.whatsapp}?text=${msgWhatsApp}`;
+            document.getElementById('linkWhatsApp').href = link;
+
+            diaSelecionado = null;
+            horarioSelecionado = null;
+            servicosSelecionados = [];
+            renderizarCalendario();
+            mostrarToast('Agendamento confirmado com sucesso! ✨', 'sucesso');
+        });
+
+        // ============ FECHAR MODAIS ============
+        function fecharTodosModais() {
+            document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active'));
+        }
+
+        document.getElementById('linkConsultarTermosCliente').addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('conteudoTermosCliente').innerHTML = window.AGNAIL_TERMOS_HTML || '';
+            const overlay = document.getElementById('overlayTermosCliente');
+            const checkWrapper = document.getElementById('checkAceiteTermosCliente').parentElement;
+            const btn = document.getElementById('btnAceitarTermosCliente');
+            checkWrapper.style.display = 'none';
+            btn.disabled = false;
+            btn.textContent = 'Fechar';
+            btn.onclick = function() {
+                overlay.classList.remove('active');
+                checkWrapper.style.display = '';
+                btn.textContent = 'Continuar';
+            };
+            overlay.classList.add('active');
+        });
+
+        document.getElementById('fecharHorarios').addEventListener('click', () => document.getElementById('overlayHorarios').classList.remove('active'));
+        document.getElementById('btnVoltarHorarios').addEventListener('click', () => document.getElementById('overlayHorarios').classList.remove('active'));
+        document.getElementById('fecharIndisponivel').addEventListener('click', () => document.getElementById('overlayIndisponivel').classList.remove('active'));
+        document.getElementById('btnOkIndisponivel').addEventListener('click', () => document.getElementById('overlayIndisponivel').classList.remove('active'));
+        document.getElementById('fecharForm').addEventListener('click', () => document.getElementById('overlayForm').classList.remove('active'));
+
+        document.getElementById('btnFecharConfirmacao').addEventListener('click', function() {
+            if (confirm('Você ainda não enviou a solicitação pelo WhatsApp. Deseja realmente sair sem enviar?\n\nSe você já enviou a notificação pelo WhatsApp, pode desconsiderar este aviso.')) {
+                document.getElementById('overlayConfirmacao').classList.remove('active');
+            }
+        });
+
+        document.getElementById('fecharConfirmacao').addEventListener('click', function() {
+            if (confirm('Você ainda não enviou a solicitação pelo WhatsApp. Deseja realmente sair sem enviar?\n\nSe você já enviou a notificação pelo WhatsApp, pode desconsiderar este aviso.')) {
+                document.getElementById('overlayConfirmacao').classList.remove('active');
+            }
+        });
+
+        // ============ NAVEGAÇÃO ============
+        document.getElementById('btnMesAnterior').addEventListener('click', () => {
+            if (mesAtual === 0) { mesAtual = 11; anoAtual--; } else { mesAtual--; }
+            diaSelecionado = null;
+            horarioSelecionado = null;
+            renderizarCalendario();
+        });
+        document.getElementById('btnMesSeguinte').addEventListener('click', () => {
+            if (mesAtual === 11) { mesAtual = 0; anoAtual++; } else { mesAtual++; }
+            diaSelecionado = null;
+            horarioSelecionado = null;
+            renderizarCalendario();
+        });
+
+        // ============ TOAST ============
+        function mostrarToast(msg, tipo) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast ' + (tipo || '');
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ============ MÁSCARA TELEFONE NO INPUT ============
+        document.getElementById('inputTelefone').addEventListener('input', function() {
+            mascaraTelefone(this);
+        });
+
+        // ============ ATUALIZAÇÃO PERIÓDICA ============
+        setInterval(() => {
+            const cfgAtual = getConfig();
+            Object.assign(config, cfgAtual);
+            atualizarHeader();
+            renderizarCalendario();
+        }, 10000);
+
+        // ============ INICIALIZAR ============
+        renderizarCalendario();
+        console.log('🌸 Agnail - Agendamento pronto!');
+
+        // ============ REGISTRO DO SERVICE WORKER ============
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registrado com sucesso!', reg))
+                .catch(err => console.log('Falha ao registrar SW:', err));
+        }
+    })();
+</script>
+</body>
+</html>
