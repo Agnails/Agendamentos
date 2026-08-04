@@ -1,6 +1,6 @@
 {
-  "name": "Agnail - Agendamento de Unhas",
-  "short_name": "Agnail",
+  "name": "Agnails - Agendamento de Unhas",
+  "short_name": "Agnails",
   "description": "Agendamento inteligente para estúdios de unhas",
   "start_url": "index.html",
   "display": "standalone",

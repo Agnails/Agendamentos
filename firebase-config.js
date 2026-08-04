@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Agnail - firebase-config.js
+   Agnails - firebase-config.js
    Módulo compartilhado: inicialização do Firebase, autenticação Google,
    helpers de Firestore e compactação/conversão de imagens para Base64.
    Incluído (via <script>) em: login.html, cobranca.html, manicures.html,
@@ -9,13 +9,12 @@
    ========================================================================== */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCuX3SRhDvZS_BiKIL1q_VFwacMBwZ5tbU",
-  authDomain: "appagenda-f278b.firebaseapp.com",
-  databaseURL: "https://appagenda-f278b-default-rtdb.firebaseio.com",
-  projectId: "appagenda-f278b",
-  storageBucket: "appagenda-f278b.firebasestorage.app",
-  messagingSenderId: "676987896115",
-  appId: "1:676987896115:web:74ecdbedabca34f5923e46"
+  apiKey: "AIzaSyCQBtTrb6tWfcEzR-6JQ2Cyob3v26g19oA",
+  authDomain: "agnails-47044.firebaseapp.com",
+  projectId: "agnails-47044",
+  storageBucket: "agnails-47044.firebasestorage.app",
+  messagingSenderId: "669802553809",
+  appId: "1:669802553809:web:43ae6ea9cd0aa6d05380f0"
 };
 
 if (!firebase.apps.length) {
@@ -124,6 +123,35 @@ async function agnailProcessarImagem(file) {
 }
 
 /* ------------------------------------------------------------------------
+   Escape de HTML (proteção contra XSS)
+   Sempre que um valor puder ter sido digitado por alguém (cliente público
+   em agendamentos.html, ou a própria manicure/admin) ele deve passar por
+   uma destas funções antes de entrar em um template usado com innerHTML,
+   já que nada impede que esses campos cheguem ao Firestore contendo HTML
+   ou scripts — seja pela própria UI, seja por uma chamada direta à API.
+   ------------------------------------------------------------------------ */
+
+/**
+ * Escapa um valor para uso seguro como TEXTO dentro de um template HTML
+ * (entre tags, ex: `<span>${agnailEscaparHTML(nome)}</span>`).
+ */
+function agnailEscaparHTML(valor) {
+  const div = document.createElement('div');
+  div.textContent = (valor === null || valor === undefined) ? '' : String(valor);
+  return div.innerHTML;
+}
+
+/**
+ * Escapa um valor para uso seguro dentro de um ATRIBUTO HTML delimitado
+ * por aspas duplas (ex: `<img src="${agnailEscaparAtributo(url)}">`).
+ * Além do escape de HTML, neutraliza aspas para impedir que o valor
+ * "escape" do atributo e injete novos atributos/tags.
+ */
+function agnailEscaparAtributo(valor) {
+  return agnailEscaparHTML(valor).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/* ------------------------------------------------------------------------
    Utilitários de formulário: máscara de telefone celular e limite de
    caracteres em campos de texto comuns.
    ------------------------------------------------------------------------ */
@@ -221,18 +249,25 @@ async function agnailCriarEstruturaInicial(user) {
   const fimTeste = new Date();
   fimTeste.setDate(fimTeste.getDate() + (configSistema.diasTeste || AGNAIL_DIAS_TESTE_PADRAO));
 
+  // meta/perfil: dados PÚBLICOS (lidos sem login pela página de
+  // agendamento do cliente). Nunca guardar e-mail/telefone aqui.
   const perfil = {
     nomeEmpresa: '',
     slogan: '',
+    imagemPerfil: '',
+    perfilCompleto: false,
+    criadoEm: agora,
+    atualizadoEm: agora
+  };
+
+  // meta/perfilPrivado: dados PESSOAIS — leitura restrita à própria dona
+  // da conta e ao admin (ver firestore.rules).
+  const perfilPrivado = {
     nomeResponsavel: user.displayName || '',
     email: user.email || '',
     telefone: '',
-    imagemPerfil: '',
-    perfilCompleto: false,
     termosAceitos: false,
-    termosAceitosEm: null,
-    criadoEm: agora,
-    atualizadoEm: agora
+    termosAceitosEm: null
   };
 
   const assinatura = {
@@ -276,11 +311,12 @@ async function agnailCriarEstruturaInicial(user) {
 
   const manicureRef = agnailManicureRef(user.uid);
   batch.set(manicureRef.collection('meta').doc('perfil'), perfil);
+  batch.set(manicureRef.collection('meta').doc('perfilPrivado'), perfilPrivado);
   batch.set(manicureRef.collection('meta').doc('assinatura'), assinatura);
   batch.set(manicureRef.collection('meta').doc('configuracoes'), configuracoes);
 
   await batch.commit();
-  return { perfil, assinatura, configuracoes };
+  return { perfil, perfilPrivado, assinatura, configuracoes };
 }
 
 async function agnailGetUsuario(uid) {
@@ -296,6 +332,31 @@ async function agnailGetAssinatura(uid) {
 async function agnailGetPerfil(uid) {
   const snap = await agnailManicureRef(uid).collection('meta').doc('perfil').get();
   return snap.exists ? snap.data() : null;
+}
+
+/**
+ * Dados PESSOAIS (e-mail, telefone, nome do responsável, aceite de
+ * termos). Só pode ser lido pela própria dona da conta ou por um admin
+ * (ver firestore.rules) — nunca chame isto a partir de uma página
+ * pública como agendamentos.html.
+ */
+async function agnailGetPerfilPrivado(uid) {
+  const snap = await agnailManicureRef(uid).collection('meta').doc('perfilPrivado').get();
+  return snap.exists ? snap.data() : null;
+}
+
+/**
+ * Retorna o perfil completo (público + privado) mesclado, para uso no
+ * painel da própria manicure e no painel administrativo. Se quem chamar
+ * não tiver permissão de leitura de meta/perfilPrivado, a parte privada
+ * simplesmente vem vazia em vez de derrubar a chamada inteira.
+ */
+async function agnailGetPerfilCompleto(uid) {
+  const [perfil, perfilPrivado] = await Promise.all([
+    agnailGetPerfil(uid),
+    agnailGetPerfilPrivado(uid).catch(() => null)
+  ]);
+  return { ...(perfil || {}), ...(perfilPrivado || {}) };
 }
 
 async function agnailGetConfiguracoes(uid) {
@@ -476,7 +537,7 @@ async function agnailEnviarComprovante(uid, file) {
 }
 
 /* Exposição global (o app usa scripts clássicos, não ES modules) */
-window.Agnail = {
+window.Agnails = {
   auth, db,
   firebaseConfig,
   DIAS_TESTE_PADRAO: AGNAIL_DIAS_TESTE_PADRAO,
@@ -487,6 +548,8 @@ window.Agnail = {
   mascararCelular: agnailMascararCelular,
   aplicarMascaraCelular: agnailAplicarMascaraCelular,
   limitarTexto: agnailLimitarTexto,
+  escaparHTML: agnailEscaparHTML,
+  escaparAtributo: agnailEscaparAtributo,
   processarImagem: agnailProcessarImagem,
   getConfigSistema: agnailGetConfigSistema,
   setConfigSistema: agnailSetConfigSistema,
@@ -495,6 +558,8 @@ window.Agnail = {
   getUsuario: agnailGetUsuario,
   getAssinatura: agnailGetAssinatura,
   getPerfil: agnailGetPerfil,
+  getPerfilPrivado: agnailGetPerfilPrivado,
+  getPerfilCompleto: agnailGetPerfilCompleto,
   getConfiguracoes: agnailGetConfiguracoes,
   calcularStatusAcesso: agnailCalcularStatusAcesso,
   processarPosLogin: agnailProcessarPosLogin,

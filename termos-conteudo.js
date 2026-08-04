@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Agnail - termos-conteudo.js
+   Agnails - termos-conteudo.js
    Conteúdo compartilhado da Política de Privacidade e dos Termos de Uso,
    usado no painel da manicure (manicures.html) e no painel do cliente
    (agendamentos.html).
@@ -9,7 +9,7 @@
    (Lei nº 12.965/2014) e o Código de Defesa do Consumidor (Lei nº
    8.078/1990), mas não substitui a revisão por um advogado antes da
    publicação em produção. Campos entre colchetes [ ] devem ser
-   preenchidos com os dados reais da empresa responsável pelo Agnail
+   preenchidos com os dados reais da empresa responsável pelo Agnails
    antes do lançamento.
    ========================================================================== */
 window.AGNAIL_TERMOS_HTML = `
@@ -19,21 +19,21 @@ window.AGNAIL_TERMOS_HTML = `
 
     <p><strong>1. Aceitação dos Termos</strong></p>
     <p>Estes Termos de Uso ("Termos") regulam o acesso e a utilização da
-    plataforma Agnail ("Agnail", "plataforma" ou "serviço"), oferecida por
+    plataforma Agnails ("Agnails", "plataforma" ou "serviço"), oferecida por
     [Razão Social], inscrita no CNPJ sob o nº [CNPJ], com sede em
-    [endereço] ("Agnail", "nós"). Ao criar uma conta, acessar ou utilizar a
+    [endereço] ("Agnails", "nós"). Ao criar uma conta, acessar ou utilizar a
     plataforma de qualquer forma, você ("usuário") declara que leu,
     compreendeu e concorda integralmente com estes Termos e com a Política
     de Privacidade abaixo. Caso não concorde, não deverá utilizar o
     serviço.</p>
 
     <p><strong>2. Descrição do Serviço</strong></p>
-    <p>O Agnail é uma ferramenta de agendamento e gestão voltada a
+    <p>O Agnails é uma ferramenta de agendamento e gestão voltada a
     profissionais de manicure e estabelecimentos similares ("profissional"
     ou "manicure"), permitindo o gerenciamento de clientes, horários,
     serviços oferecidos, controle financeiro e o agendamento de horários
     por clientes finais ("cliente") através de um link público
-    disponibilizado pela profissional. O Agnail atua exclusivamente como
+    disponibilizado pela profissional. O Agnails atua exclusivamente como
     fornecedor de tecnologia e não é parte na relação comercial entre a
     profissional e seus clientes, não se responsabilizando pela qualidade,
     execução, cancelamento ou qualquer aspecto dos serviços de manicure em
@@ -45,14 +45,14 @@ window.AGNAIL_TERMOS_HTML = `
     acesso com terceiros. A profissional é integralmente responsável pela
     veracidade, exatidão e atualização dos dados fornecidos no cadastro
     (nome, dados do negócio, telefone, imagens) e por todas as atividades
-    realizadas em sua conta. O Agnail poderá recusar, suspender ou encerrar
+    realizadas em sua conta. O Agnails poderá recusar, suspender ou encerrar
     cadastros que contenham informações falsas, incompletas ou que violem
     estes Termos.</p>
 
     <p><strong>4. Período de Teste Gratuito e Assinatura</strong></p>
     <p>No primeiro cadastro, a profissional recebe um período de teste
     gratuito, cuja duração é informada no momento da criação da conta e
-    pode ser alterada pela administração do Agnail a qualquer momento para
+    pode ser alterada pela administração do Agnails a qualquer momento para
     novos cadastros. O período de teste é concedido uma única vez por
     profissional; a exclusão e recriação da conta não gera direito a novo
     período de teste, conforme mecanismo de retenção de dados descrito na
@@ -63,8 +63,8 @@ window.AGNAIL_TERMOS_HTML = `
     <p><strong>5. Pagamento, Aprovação e Cancelamento</strong></p>
     <p>O pagamento da mensalidade é realizado via PIX, mediante envio do
     comprovante pela própria profissional, ficando o acesso condicionado à
-    análise e aprovação manual pela equipe do Agnail, que poderá levar até
-    alguns dias úteis. O Agnail não realiza cobranças automáticas ou
+    análise e aprovação manual pela equipe do Agnails, que poderá levar até
+    alguns dias úteis. O Agnails não realiza cobranças automáticas ou
     recorrentes sem ação da profissional. A ausência de pagamento após o
     vencimento do plano acarreta o bloqueio automático do acesso ao painel
     e do link público de agendamento, sem prejuízo da preservação dos dados
@@ -106,21 +106,21 @@ window.AGNAIL_TERMOS_HTML = `
 
     <p><strong>9. Propriedade Intelectual</strong></p>
     <p>Todos os direitos sobre o software, marca, layout, funcionalidades e
-    demais elementos da plataforma Agnail pertencem ao Agnail e/ou a seus
+    demais elementos da plataforma Agnails pertencem ao Agnails e/ou a seus
     licenciantes, sendo vedada a reprodução, modificação ou distribuição
     não autorizada. O conteúdo inserido pela profissional (fotos, nome do
     negócio, descrição de serviços) permanece de sua titularidade,
-    concedendo-se ao Agnail apenas a licença necessária para armazenar e
+    concedendo-se ao Agnails apenas a licença necessária para armazenar e
     exibir esse conteúdo no âmbito da prestação do serviço.</p>
 
     <p><strong>10. Disponibilidade do Serviço e Limitação de Responsabilidade</strong></p>
-    <p>O Agnail envida esforços razoáveis para manter a plataforma
+    <p>O Agnails envida esforços razoáveis para manter a plataforma
     disponível, segura e livre de erros, mas não garante operação
     ininterrupta ou isenta de falhas, podendo o serviço ser
     temporariamente interrompido para manutenção, atualizações ou por
     motivos alheios à sua vontade (falhas de provedores de infraestrutura,
     caso fortuito ou força maior). Na máxima extensão permitida pela lei
-    aplicável, o Agnail não se responsabiliza por danos indiretos, lucros
+    aplicável, o Agnails não se responsabiliza por danos indiretos, lucros
     cessantes ou perda de dados decorrentes do uso ou da impossibilidade de
     uso da plataforma, respondendo apenas nos limites da legislação
     consumerista, quando aplicável.</p>
@@ -131,7 +131,7 @@ window.AGNAIL_TERMOS_HTML = `
     imediatamente e os dados permanecem armazenados por 90 (noventa) dias,
     prazo em que a conta pode ser restaurada mediante novo login com a
     mesma conta Google; após esse prazo, a exclusão torna-se definitiva e
-    irreversível, conforme detalhado na Política de Privacidade. O Agnail
+    irreversível, conforme detalhado na Política de Privacidade. O Agnails
     poderá também suspender ou encerrar contas que violem estes Termos,
     mediante comunicação prévia sempre que possível.</p>
 
@@ -153,10 +153,10 @@ window.AGNAIL_TERMOS_HTML = `
     <h4>Política de Privacidade</h4>
 
     <p><strong>1. Introdução e Compromisso com a LGPD</strong></p>
-    <p>Esta Política de Privacidade descreve como o Agnail coleta, utiliza,
+    <p>Esta Política de Privacidade descreve como o Agnails coleta, utiliza,
     armazena, compartilha e protege dados pessoais tratados na plataforma,
     em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº
-    13.709/2018 – LGPD) e demais normas aplicáveis. O Agnail atua como
+    13.709/2018 – LGPD) e demais normas aplicáveis. O Agnails atua como
     controlador dos dados cadastrais das profissionais e como operador, em
     determinados contextos, dos dados de clientes inseridos pelas
     profissionais na plataforma.</p>
@@ -195,7 +195,7 @@ window.AGNAIL_TERMOS_HTML = `
     <p><strong>4. Compartilhamento de Dados com Terceiros</strong></p>
     <p>Os dados são armazenados em infraestrutura do Google Firebase
     (Google Cloud Platform), que atua como operador de dados sob instruções
-    do Agnail e mantém seus próprios padrões de segurança e conformidade
+    do Agnails e mantém seus próprios padrões de segurança e conformidade
     internacional. Não vendemos, alugamos ou compartilhamos dados pessoais
     com terceiros para fins de publicidade. Dados podem ser divulgados a
     autoridades públicas quando exigido por lei, ordem judicial ou
@@ -266,6 +266,6 @@ window.AGNAIL_TERMOS_HTML = `
     <p><strong>11. Encarregado de Dados (DPO) e Contato</strong></p>
     <p>Dúvidas, solicitações relacionadas a dados pessoais ou o exercício
     dos direitos previstos na LGPD podem ser encaminhados ao Encarregado de
-    Proteção de Dados (DPO) do Agnail pelo e-mail [e-mail do encarregado] ou
+    Proteção de Dados (DPO) do Agnails pelo e-mail [e-mail do encarregado] ou
     pelos canais de suporte disponíveis no painel.</p>
 `;

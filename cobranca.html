@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Agnail - Cobrança</title>
+<title>Agnails - Cobrança</title>
 <link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -89,7 +89,7 @@
 <div class="container">
     <div class="header">
         <div class="logo"><i class="fa-solid fa-spa"></i></div>
-        <h1>Agnail</h1>
+        <h1>Agnails</h1>
     </div>
 
     <div id="telaCarregando" class="carregando-tela">
@@ -184,22 +184,22 @@
     }
 
     async function iniciar() {
-        Agnail.onAuthChange(async function (user) {
+        Agnails.onAuthChange(async function (user) {
             if (!user) {
                 window.location.href = 'login.html';
                 return;
             }
             usuarioAtual = user;
 
-            const assinatura = await Agnail.getAssinatura(user.uid);
-            const statusAcesso = Agnail.calcularStatusAcesso(assinatura);
+            const assinatura = await Agnails.getAssinatura(user.uid);
+            const statusAcesso = Agnails.calcularStatusAcesso(assinatura);
 
             if (statusAcesso.acessoLiberado) {
                 window.location.href = 'manicures.html';
                 return;
             }
 
-            configSistemaAtual = await Agnail.getConfigSistema();
+            configSistemaAtual = await Agnails.getConfigSistema();
             document.getElementById('valorMensalidade').textContent =
                 'R$ ' + Number(configSistemaAtual.mensalidade || 50).toFixed(2).replace('.', ',');
             document.getElementById('chavePixTexto').textContent = configSistemaAtual.chavePix || 'Chave não configurada';
@@ -240,11 +240,11 @@
         btn.disabled = true;
         btn.textContent = 'Enviando...';
         try {
-            await Agnail.enviarComprovante(usuarioAtual.uid, arquivoSelecionado);
+            await Agnails.enviarComprovante(usuarioAtual.uid, arquivoSelecionado);
             configurarBadge('aguardando_aprovacao');
             const numero = (configSistemaAtual.whatsappFinanceiro || '').replace(/\D/g, '');
             document.getElementById('btnWhatsapp').onclick = function () {
-                window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent('Olá! Acabei de enviar o comprovante de pagamento no painel Agnail.'), '_blank');
+                window.open('https://wa.me/' + numero + '?text=' + encodeURIComponent('Olá! Acabei de enviar o comprovante de pagamento no painel Agnails.'), '_blank');
             };
             document.getElementById('overlayConfirmacao').classList.add('show');
         } catch (e) {
@@ -263,7 +263,7 @@
     });
 
     document.getElementById('btnSair').addEventListener('click', async function () {
-        await Agnail.logout();
+        await Agnails.logout();
         window.location.href = 'login.html';
     });
 

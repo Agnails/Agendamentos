@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Agnail - Agendamento</title>
+    <title>Agnails - Agendamento</title>
     <link rel="icon" href="assets/logo.png" type="image/png">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -658,7 +658,7 @@
 <div class="container">
     <header class="header">
         <div class="header-logo" id="headerLogo"><i class="fa-solid fa-spa"></i></div>
-        <h1 id="headerNome">Agnail</h1>
+        <h1 id="headerNome">Agnails</h1>
         <p class="slogan" id="headerSlogan">Agendamento inteligente</p>
     </header>
 
@@ -852,11 +852,11 @@
             return;
         }
 
-        const manicureRefPublica = Agnail.manicureRef(manicureUid);
+        const manicureRefPublica = Agnails.manicureRef(manicureUid);
 
         const [configuracoesRemotas, assinaturaRemota, agendamentosSnap] = await Promise.all([
-            Agnail.getConfiguracoes(manicureUid),
-            Agnail.getAssinatura(manicureUid),
+            Agnails.getConfiguracoes(manicureUid),
+            Agnails.getAssinatura(manicureUid),
             manicureRefPublica.collection('agendamentos').get()
         ]);
 
@@ -873,7 +873,7 @@
         // Se o plano da manicure estiver expirado, ou o acesso tiver sido
         // bloqueado pelo administrador, o link público de agendamento fica
         // indisponível até a situação ser regularizada.
-        const statusAcessoManicure = Agnail.calcularStatusAcesso(assinaturaRemota);
+        const statusAcessoManicure = Agnails.calcularStatusAcesso(assinaturaRemota);
         if (!statusAcessoManicure.acessoLiberado) {
             const gate = document.getElementById('agnailAuthGate');
             gate.classList.add('erro');
@@ -939,7 +939,7 @@
 
         function salvarAgendamentos(arr) {
             // Mantido apenas por compatibilidade com o restante do código;
-            // a gravação de fato acontece via Agnail.db diretamente no
+            // a gravação de fato acontece via Agnails.db diretamente no
             // momento da confirmação do agendamento (ver mais abaixo).
             window._agnailCacheAgendamentos = arr;
         }
@@ -959,11 +959,11 @@
 
         // ============ HEADER ============
         function atualizarHeader() {
-            document.getElementById('headerNome').textContent = config.nomeEmpresa || 'Agnail';
+            document.getElementById('headerNome').textContent = config.nomeEmpresa || 'Agnails';
             document.getElementById('headerSlogan').textContent = config.slogan || '';
             const logoEl = document.getElementById('headerLogo');
             if (config.imagem) {
-                logoEl.innerHTML = `<img src="${config.imagem}" alt="Logo">`;
+                logoEl.innerHTML = `<img src="${Agnails.escaparAtributo(config.imagem)}" alt="Logo">`;
             } else {
                 logoEl.innerHTML = '<i class="fa-solid fa-spa"></i>';
             }
@@ -1209,7 +1209,7 @@
                 const sel = servicosSelecionados.includes(i);
                 return `<div class="servico-check ${sel?'selecionado':''}" onclick="window.toggleServico(${i})">
                     <span class="check-indicator"><i class="fa-solid fa-check"></i></span>
-                    <span style="flex:1;">${s.nome}</span>
+                    <span style="flex:1;">${Agnails.escaparHTML(s.nome)}</span>
                     <span style="font-weight:700;color:var(--rosa-escuro);">R$ ${s.valor.toFixed(2)}</span>
                 </div>`;
             }).join('');
@@ -1229,7 +1229,7 @@
         function renderizarFormasPagamento() {
             const select = document.getElementById('inputPagamento');
             select.innerHTML = '<option value="">Selecione...</option>' +
-                (config.formasPagamento || []).map(f => `<option value="${f}">${f}</option>`).join('');
+                (config.formasPagamento || []).map(f => `<option value="${Agnails.escaparAtributo(f)}">${Agnails.escaparHTML(f)}</option>`).join('');
         }
 
         function atualizarValorTotal() {
@@ -1364,12 +1364,13 @@
             document.getElementById('overlayConfirmacao').classList.add('active');
 
             let msgWhatsApp =
-                `Olá! Gostaria de confirmar meu agendamento:%0A%0A👤 *Nome:* ${nome}%0A📅 *Data:* ${dataFormatada}%0A⏰ *Horário:* ${horario}%0A💅 *Serviços:* ${servicosNomes.join(', ')}%0A💰 *Valor:* R$ ${valorTotal.toFixed(2)}%0A💳 *Pagamento:* ${pagamento}%0A🏠 *Atendimento:* ${tipoAtendimento}`;
+                `Olá! Gostaria de confirmar meu agendamento:\n\n👤 *Nome:* ${nome}\n📅 *Data:* ${dataFormatada}\n⏰ *Horário:* ${horario}\n💅 *Serviços:* ${servicosNomes.join(', ')}\n💰 *Valor:* R$ ${valorTotal.toFixed(2)}\n💳 *Pagamento:* ${pagamento}\n🏠 *Atendimento:* ${tipoAtendimento}`;
             if (tipoAtendimento === 'A domicílio') {
-                msgWhatsApp += `%0A📍 *Endereço:* ${endereco}`;
+                msgWhatsApp += `\n📍 *Endereço:* ${endereco}`;
             }
-            msgWhatsApp += `%0A📝 *Obs:* ${obs || 'Nenhuma'}%0A%0A_Agendamento realizado via Agnail_ ✨`;
-            const link = `https://wa.me/${config.whatsapp}?text=${msgWhatsApp}`;
+            msgWhatsApp += `\n📝 *Obs:* ${obs || 'Nenhuma'}\n\n_Agendamento realizado via Agnails_ ✨`;
+            const numeroWhatsapp = (config.whatsapp || '').replace(/\D/g, '');
+            const link = `https://wa.me/${numeroWhatsapp}?text=${encodeURIComponent(msgWhatsApp)}`;
             document.getElementById('linkWhatsApp').href = link;
 
             diaSelecionado = null;
@@ -1461,7 +1462,7 @@
 
         // ============ INICIALIZAR ============
         renderizarCalendario();
-        console.log('🌸 Agnail - Agendamento pronto!');
+        console.log('🌸 Agnails - Agendamento pronto!');
 
         // ============ REGISTRO DO SERVICE WORKER ============
         if ('serviceWorker' in navigator) {

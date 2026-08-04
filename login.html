@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Agnail - Entrar</title>
+<title>Agnails - Entrar</title>
 <link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -82,7 +82,7 @@
 
 <div class="card">
     <div class="logo"><i class="fa-solid fa-spa"></i></div>
-    <h1>Agnail</h1>
+    <h1>Agnails</h1>
     <p class="slogan">Painel da manicure</p>
 
     <button class="btn-google" id="btnLoginGoogle">
@@ -99,7 +99,7 @@
 <div class="overlay" id="overlayBoasVindas">
     <div class="modal">
         <div class="icone">🎉</div>
-        <h2>Bem-vinda ao Agnail!</h2>
+        <h2>Bem-vinda ao Agnails!</h2>
         <p>Você tem <span class="destaque" id="txtDiasTeste">15 dias</span> de teste grátis para explorar todos os recursos do painel.</p>
         <p>Depois desse período, a mensalidade é de <span class="destaque" id="txtMensalidade">R$ 50,00</span>. O teste grátis é concedido apenas no primeiro cadastro.</p>
         <button id="btnComecar">Começar agora</button>
@@ -136,11 +136,11 @@
         carregando.classList.add('show');
         erroEl.classList.remove('show');
         try {
-            const cred = await Agnail.loginGoogle();
-            const resultado = await Agnail.processarPosLogin(cred.user);
+            const cred = await Agnails.loginGoogle();
+            const resultado = await Agnails.processarPosLogin(cred.user);
 
             if (resultado.novoUsuario) {
-                const configSistema = await Agnail.getConfigSistema();
+                const configSistema = await Agnails.getConfigSistema();
                 document.getElementById('txtDiasTeste').textContent = (configSistema.diasTeste || 15) + ' dias';
                 document.getElementById('txtMensalidade').textContent =
                     'R$ ' + Number(configSistema.mensalidade || 50).toFixed(2).replace('.', ',');
@@ -158,14 +158,14 @@
     });
 
     // Se já estiver logada, verifica status e redireciona direto
-    Agnail.onAuthChange(async function (user) {
+    Agnails.onAuthChange(async function (user) {
         if (!user) return;
         // evita reprocessar durante o próprio fluxo de clique acima
         if (btn.disabled) return;
         try {
-            const assinatura = await Agnail.getAssinatura(user.uid);
+            const assinatura = await Agnails.getAssinatura(user.uid);
             if (!assinatura) return; // ainda não tem estrutura -> deixa clicar em entrar
-            const statusAcesso = Agnail.calcularStatusAcesso(assinatura);
+            const statusAcesso = Agnails.calcularStatusAcesso(assinatura);
             redirecionar(statusAcesso);
         } catch (e) { /* silencioso: usuário pode simplesmente clicar em entrar */ }
     });
