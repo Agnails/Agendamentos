@@ -1645,13 +1645,21 @@
             abrirModalConclusao(ag);
         };
 
-        window.cancelarAgendamentoPainel = function(id) {
+        window.cancelarAgendamentoPainel = async function(id) {
             const agendamentos = getAgendamentos();
             const idx = agendamentos.findIndex(a => a.id === id);
             if (idx === -1) return;
             if (confirm('Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.')) {
+                const agendamentoCancelado = agendamentos[idx];
                 agendamentos[idx].status = 'cancelado';
                 setAgendamentos(agendamentos);
+                // Libera o(s) horário(s) na agenda pública para que outra
+                // pessoa possa reservá-los.
+                try {
+                    await Agnails.liberarSlotsAgendamento(usuarioAtual.uid, agendamentoCancelado);
+                } catch (e) {
+                    console.error('Erro ao liberar horário na agenda pública:', e);
+                }
                 carregarAgendamentos(document.getElementById('filtroDataAgenda').value || null);
                 mostrarToastPainel('Agendamento cancelado.', 'sucesso');
             }
@@ -1958,15 +1966,21 @@
                     `<option value="${Agnails.escaparAtributo(a.id)}">${Agnails.escaparHTML(a.nome)} - ${new Date(a.data+'T00:00:00').toLocaleDateString('pt-BR')} ${Agnails.escaparHTML(a.horario)}</option>`
                 ).join('');
         }
-        document.getElementById('btnCancelarAgendamento').addEventListener('click', () => {
+        document.getElementById('btnCancelarAgendamento').addEventListener('click', async () => {
             const id = document.getElementById('selectCancelarAgendamento').value;
             if (!id) return;
             if (confirm('Cancelar este agendamento?')) {
                 const agendamentos = getAgendamentos();
                 const idx = agendamentos.findIndex(a => a.id === id);
                 if (idx !== -1) {
+                    const agendamentoCancelado = agendamentos[idx];
                     agendamentos[idx].status = 'cancelado';
                     setAgendamentos(agendamentos);
+                    try {
+                        await Agnails.liberarSlotsAgendamento(usuarioAtual.uid, agendamentoCancelado);
+                    } catch (e) {
+                        console.error('Erro ao liberar horário na agenda pública:', e);
+                    }
                     carregarSelectCancelar();
                     carregarAgendamentos();
                     mostrarToastPainel('Agendamento cancelado.', 'sucesso');

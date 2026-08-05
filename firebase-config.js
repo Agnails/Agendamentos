@@ -490,7 +490,7 @@ async function agnailSolicitarExclusaoConta(uid, emailUsuario) {
  * Painel Administrativo (adm.html), após os 90 dias de retenção.
  */
 async function agnailExcluirContaPermanentemente(uid) {
-  const subcolecoes = ['servicos', 'clientes', 'agendamentos', 'financeiro', 'pagamentos', 'notificacoes', 'meta'];
+  const subcolecoes = ['servicos', 'clientes', 'agendamentos', 'disponibilidade', 'financeiro', 'pagamentos', 'notificacoes', 'meta'];
   for (const nome of subcolecoes) {
     const snap = await agnailManicureRef(uid).collection(nome).get();
     const batch = db.batch();
@@ -499,6 +499,30 @@ async function agnailExcluirContaPermanentemente(uid) {
   }
   await db.collection('usuarios').doc(uid).delete();
   await db.collection('administracao').doc('contasPendentesExclusao').collection('contas').doc(uid).delete();
+}
+
+/**
+ * Libera (apaga) os slots de horário reservados por um agendamento na
+ * subcoleção pública "disponibilidade", devolvendo o horário para quem
+ * quiser reservar. Deve ser chamada sempre que um agendamento for
+ * cancelado pela manicure ou pelo admin. Os IDs dos slots ficam
+ * salvos no próprio documento do agendamento (campo
+ * "slotsDisponibilidade") no momento da criação, então não é preciso
+ * recalcular horários/duração aqui.
+ * @param {string} uid uid da manicure dona da agenda
+ * @param {object} agendamento o objeto do agendamento (precisa ter o
+ *   campo slotsDisponibilidade; agendamentos antigos, criados antes desta
+ *   funcionalidade, simplesmente não têm nada para liberar)
+ */
+async function agnailLiberarSlotsAgendamento(uid, agendamento) {
+  if (!agendamento || !Array.isArray(agendamento.slotsDisponibilidade) || !agendamento.slotsDisponibilidade.length) {
+    return;
+  }
+  const batch = db.batch();
+  agendamento.slotsDisponibilidade.forEach((slotId) => {
+    batch.delete(agnailManicureRef(uid).collection('disponibilidade').doc(slotId));
+  });
+  await batch.commit();
 }
 
 /* ------------------------------------------------------------------------
@@ -565,5 +589,6 @@ window.Agnails = {
   processarPosLogin: agnailProcessarPosLogin,
   solicitarExclusaoConta: agnailSolicitarExclusaoConta,
   excluirContaPermanentemente: agnailExcluirContaPermanentemente,
+  liberarSlotsAgendamento: agnailLiberarSlotsAgendamento,
   enviarComprovante: agnailEnviarComprovante
 };

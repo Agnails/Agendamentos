@@ -854,10 +854,16 @@
 
         const manicureRefPublica = Agnails.manicureRef(manicureUid);
 
-        const [configuracoesRemotas, assinaturaRemota, agendamentosSnap] = await Promise.all([
+        // Importante: a página pública NUNCA lê a coleção "agendamentos"
+        // (ela contém dados pessoais de clientes — nome, telefone,
+        // endereço — e não é de leitura pública). Para saber quais
+        // horários estão ocupados, lemos apenas "disponibilidade", uma
+        // coleção espelho sem nenhum dado pessoal, com um documento por
+        // slot de horário já ocupado.
+        const [configuracoesRemotas, assinaturaRemota, disponibilidadeSnap] = await Promise.all([
             Agnails.getConfiguracoes(manicureUid),
             Agnails.getAssinatura(manicureUid),
-            manicureRefPublica.collection('agendamentos').get()
+            manicureRefPublica.collection('disponibilidade').get()
         ]);
 
         if (!configuracoesRemotas) {
@@ -881,7 +887,12 @@
             return;
         }
 
-        window._agnailCacheAgendamentos = agendamentosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Cada doc de "disponibilidade" tem ID "AAAA-MM-DD_HH:MM"; extraímos
+        // data/horario diretamente do ID para não depender de campos extras.
+        window._agnailCacheDisponibilidade = disponibilidadeSnap.docs.map(d => {
+            const [dataSlot, horarioSlot] = d.id.split('_');
+            return { data: dataSlot, horario: horarioSlot, ...d.data() };
+        });
 
         // ============ TERMOS DE USO / POLÍTICA DE PRIVACIDADE (cliente) ============
         // Como o cliente não faz login, o aceite fica registrado no
@@ -933,15 +944,14 @@
             return { ...padrao, ...parsed };
         }
 
-        function getAgendamentos() {
-            return window._agnailCacheAgendamentos;
+        function getDisponibilidade() {
+            return window._agnailCacheDisponibilidade;
         }
 
-        function salvarAgendamentos(arr) {
-            // Mantido apenas por compatibilidade com o restante do código;
-            // a gravação de fato acontece via Agnails.db diretamente no
-            // momento da confirmação do agendamento (ver mais abaixo).
-            window._agnailCacheAgendamentos = arr;
+        function adicionarDisponibilidadeLocal(itens) {
+            // Atualiza o cache local imediatamente após uma reserva bem
+            // sucedida, para refletir na hora sem esperar um novo fetch.
+            window._agnailCacheDisponibilidade = window._agnailCacheDisponibilidade.concat(itens);
         }
 
         const config = getConfig();
@@ -995,25 +1005,12 @@
         }
 
         function getSlotsOcupados(dataStr) {
-            const agendamentos = getAgendamentos();
-            const slots = gerarSlots();
+            // Cada documento em "disponibilidade" já representa um único
+            // slot ocupado (a expansão por duração acontece uma vez, no
+            // momento da reserva — ver criarReservaComTravaDeHorario).
+            const disponibilidade = getDisponibilidade();
             const ocupados = new Set();
-            const interval = config.intervaloMinutos || 60;
-
-            agendamentos.filter(a => a.data === dataStr && (a.status === 'agendado' || a.status === 'concluido'))
-                .forEach(a => {
-                    const inicio = a.horario;
-                    const duracaoTotal = a.duracaoTotal || (a.servicos ? a.servicos.length * 30 : 30);
-                    const numSlots = Math.ceil(duracaoTotal / interval);
-                    const idx = slots.indexOf(inicio);
-                    if (idx !== -1) {
-                        for (let i = 0; i < numSlots && idx + i < slots.length; i++) {
-                            ocupados.add(slots[idx + i]);
-                        }
-                    } else {
-                        ocupados.add(inicio);
-                    }
-                });
+            disponibilidade.filter(d => d.data === dataStr).forEach(d => ocupados.add(d.horario));
             return ocupados;
         }
 
@@ -1290,7 +1287,7 @@
         });
 
         // ============ ENVIAR FORM ============
-        document.getElementById('formAgendamento').addEventListener('submit', function(e) {
+        document.getElementById('formAgendamento').addEventListener('submit', async function(e) {
             e.preventDefault();
             const nome = document.getElementById('inputNome').value.trim();
             const telefone = document.getElementById('inputTelefone').value.replace(/\D/g, '');
@@ -1324,8 +1321,22 @@
                 return;
             }
 
-            const novoAgendamento = {
-                id: 'ag_' + Date.now() + '_' + Math.random().toString(36).substr(2,6),
+            const slots = gerarSlots();
+            const interval = config.intervaloMinutos || 60;
+            const numSlots = Math.ceil(duracaoTotal / interval);
+            const idx = slots.indexOf(horario);
+            const slotsConsumidos = [];
+            for (let i = 0; i < numSlots; i++) slotsConsumidos.push(slots[idx + i]);
+            // ID determinístico por slot ("AAAA-MM-DD_HH:MM"). É esse ID
+            // fixo que impede duas pessoas de reservarem o mesmo horário ao
+            // mesmo tempo: as regras do Firestore tratam uma segunda
+            // tentativa de gravar o mesmo ID como UPDATE (não CREATE), e
+            // não existe permissão pública de update nessa coleção — então
+            // a segunda reserva é automaticamente rejeitada pelo servidor.
+            const slotIds = slotsConsumidos.map(h => `${data}_${h}`);
+
+            const novoId = 'ag_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+            const dadosAgendamento = {
                 nome,
                 telefone,
                 servicos: servicosNomes,
@@ -1339,22 +1350,51 @@
                 endereco: endereco || '',
                 status: 'agendado',
                 criadoEm: new Date().toISOString(),
+                slotsDisponibilidade: slotIds,
             };
 
-            const agendamentos = getAgendamentos();
-            agendamentos.push(novoAgendamento);
-            salvarAgendamentos(agendamentos);
+            const btnSubmitAgendamento = document.getElementById('btnConfirmar');
+            btnSubmitAgendamento.disabled = true;
 
-            const { id: novoId, ...dadosAgendamento } = novoAgendamento;
-            manicureRefPublica.collection('agendamentos').doc(novoId).set(dadosAgendamento)
-                .catch(err => console.error('Erro ao salvar agendamento:', err));
-
-            // Upsert do cliente (por telefone) para manter o histórico
-            manicureRefPublica.collection('clientes').doc(telefone).set({
+            const batch = Agnails.db.batch();
+            batch.set(manicureRefPublica.collection('agendamentos').doc(novoId), dadosAgendamento);
+            slotIds.forEach(slotId => {
+                // Documento SEM nenhum dado pessoal — só o suficiente para
+                // saber que o horário está ocupado.
+                batch.set(manicureRefPublica.collection('disponibilidade').doc(slotId), {
+                    agendamentoId: novoId,
+                    duracaoTotal: duracaoTotal
+                });
+            });
+            batch.set(manicureRefPublica.collection('clientes').doc(telefone), {
                 nome, telefone,
                 ultimoAgendamento: data,
                 criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true }).catch(err => console.error('Erro ao salvar cliente:', err));
+            }, { merge: true });
+
+            try {
+                await batch.commit();
+            } catch (err) {
+                console.error('Erro ao confirmar agendamento:', err);
+                // A causa mais provável de falha aqui é justamente a trava
+                // de horário: alguém reservou o mesmo slot poucos segundos
+                // antes. Atualizamos a disponibilidade e avisamos a pessoa
+                // em vez de deixar a reserva "sumir" silenciosamente.
+                try {
+                    const dispAtualizada = await manicureRefPublica.collection('disponibilidade').get();
+                    window._agnailCacheDisponibilidade = dispAtualizada.docs.map(d => {
+                        const [dataSlot, horarioSlot] = d.id.split('_');
+                        return { data: dataSlot, horario: horarioSlot, ...d.data() };
+                    });
+                } catch (e2) { /* segue mesmo se o refresh falhar */ }
+                mostrarToast('Esse horário acabou de ser reservado por outra pessoa. Escolha outro horário.', 'erro');
+                btnSubmitAgendamento.disabled = false;
+                validarDisponibilidade();
+                return;
+            }
+
+            btnSubmitAgendamento.disabled = false;
+            adicionarDisponibilidadeLocal(slotsConsumidos.map(h => ({ data, horario: h, agendamentoId: novoId, duracaoTotal })));
 
             document.getElementById('overlayForm').classList.remove('active');
 
@@ -1453,10 +1493,17 @@
         });
 
         // ============ ATUALIZAÇÃO PERIÓDICA ============
-        setInterval(() => {
+        setInterval(async () => {
             const cfgAtual = getConfig();
             Object.assign(config, cfgAtual);
             atualizarHeader();
+            try {
+                const dispSnap = await manicureRefPublica.collection('disponibilidade').get();
+                window._agnailCacheDisponibilidade = dispSnap.docs.map(d => {
+                    const [dataSlot, horarioSlot] = d.id.split('_');
+                    return { data: dataSlot, horario: horarioSlot, ...d.data() };
+                });
+            } catch (e) { /* mantém o cache anterior se a rede falhar */ }
             renderizarCalendario();
         }, 10000);
 
