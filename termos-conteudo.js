@@ -8,20 +8,19 @@
    consistente com a LGPD (Lei nº 13.709/2018), o Marco Civil da Internet
    (Lei nº 12.965/2014) e o Código de Defesa do Consumidor (Lei nº
    8.078/1990), mas não substitui a revisão por um advogado antes da
-   publicação em produção. Campos entre colchetes [ ] devem ser
-   preenchidos com os dados reais da empresa responsável pelo Agnails
-   antes do lançamento.
+   publicação em produção. Campos entre colchetes [ ] foram preenchidos
+   com os dados fornecidos pela Tecminia.
    ========================================================================== */
 window.AGNAIL_TERMOS_HTML = `
-    <p style="font-size:0.78rem; color:var(--texto-claro);">Última atualização: [inserir data]. Versão 2.0.</p>
+    <p style="font-size:0.78rem; color:var(--texto-claro);">Última atualização: 05 de agosto de 2026. Versão 2.1.</p>
 
     <h4>Termos de Uso</h4>
 
     <p><strong>1. Aceitação dos Termos</strong></p>
-    <p>Estes Termos de Uso ("Termos") regulam o acesso e a utilização da
-    plataforma Agnails ("Agnails", "plataforma" ou "serviço"), oferecida por
-    [Razão Social], inscrita no CNPJ sob o nº [CNPJ], com sede em
-    [endereço] ("Agnails", "nós"). Ao criar uma conta, acessar ou utilizar a
+    <p>Estes Termos de Uso regulam o acesso e a utilização da
+    plataforma Agnails, oferecida pela startup
+    Tecminia (em constituição), com sede na
+    BR-319, Km 110, Careiro/AM. Ao criar uma conta, acessar ou utilizar a
     plataforma de qualquer forma, você ("usuário") declara que leu,
     compreendeu e concorda integralmente com estes Termos e com a Política
     de Privacidade abaixo. Caso não concorde, não deverá utilizar o
@@ -60,7 +59,7 @@ window.AGNAIL_TERMOS_HTML = `
     do uso da plataforma depende da contratação e do pagamento da
     mensalidade vigente, informada dentro do próprio painel.</p>
 
-    <p><strong>5. Pagamento, Aprovação e Cancelamento</strong></p>
+    <p><strong>5. Pagamento, Aprovação e Reajuste dos Planos</strong></p>
     <p>O pagamento da mensalidade é realizado via PIX, mediante envio do
     comprovante pela própria profissional, ficando o acesso condicionado à
     análise e aprovação manual pela equipe do Agnails, que poderá levar até
@@ -72,6 +71,14 @@ window.AGNAIL_TERMOS_HTML = `
     ressalvadas as hipóteses previstas em lei, incluindo o direito de
     arrependimento previsto no art. 49 do Código de Defesa do Consumidor
     quando aplicável.</p>
+    <p><strong>5.1. Reajuste dos Planos:</strong> Os valores dos planos de
+    assinatura podem ser reajustados periodicamente, a critério do Agnails.
+    Qualquer reajuste será comunicado com antecedência mínima de 30 (trinta)
+    dias por meio do painel da profissional ou pelo e-mail cadastrado. O
+    novo valor será aplicado somente a partir da renovação subsequente do
+    plano, respeitado o direito da profissional de cancelar a assinatura
+    antes da aplicação do reajuste, sem qualquer ônus além dos valores já
+    devidos pelo período utilizado.</p>
 
     <p><strong>6. Obrigações da Profissional</strong></p>
     <p>A profissional compromete-se a: (i) manter seus dados cadastrais
@@ -125,15 +132,21 @@ window.AGNAIL_TERMOS_HTML = `
     uso da plataforma, respondendo apenas nos limites da legislação
     consumerista, quando aplicável.</p>
 
-    <p><strong>11. Suspensão e Encerramento de Conta</strong></p>
+    <p><strong>11. Suspensão, Encerramento de Conta e Exportação de Dados</strong></p>
     <p>A profissional pode solicitar a exclusão de sua conta a qualquer
-    momento diretamente pelo painel. Nesse caso, o acesso é bloqueado
-    imediatamente e os dados permanecem armazenados por 90 (noventa) dias,
-    prazo em que a conta pode ser restaurada mediante novo login com a
-    mesma conta Google; após esse prazo, a exclusão torna-se definitiva e
-    irreversível, conforme detalhado na Política de Privacidade. O Agnails
-    poderá também suspender ou encerrar contas que violem estes Termos,
-    mediante comunicação prévia sempre que possível.</p>
+    momento diretamente pelo painel. Antes de efetivar a exclusão, a
+    profissional poderá requerer a exportação de seus dados (histórico de
+    agendamentos, lista de clientes, dados financeiros, entre outros) em
+    formato estruturado e legível, mediante solicitação expressa ao suporte
+    do Agnails. A exportação será providenciada em até 15 (quinze) dias
+    úteis, desde que a conta esteja ativa e sem violações a estes Termos.</p>
+    <p>Uma vez solicitada a exclusão, o acesso é bloqueado imediatamente e
+    os dados permanecem armazenados por 90 (noventa) dias, prazo em que a
+    conta pode ser restaurada mediante novo login com a mesma conta Google;
+    após esse prazo, a exclusão torna-se definitiva e irreversível,
+    conforme detalhado na Política de Privacidade. O Agnails poderá também
+    suspender ou encerrar contas que violem estes Termos, mediante
+    comunicação prévia sempre que possível.</p>
 
     <p><strong>12. Alterações nestes Termos</strong></p>
     <p>Estes Termos podem ser atualizados periodicamente para refletir
@@ -145,15 +158,16 @@ window.AGNAIL_TERMOS_HTML = `
 
     <p><strong>13. Legislação Aplicável e Foro</strong></p>
     <p>Estes Termos são regidos pelas leis da República Federativa do
-    Brasil. Fica eleito o foro da comarca de [cidade/UF] para dirimir
-    quaisquer controvérsias decorrentes destes Termos, ressalvado o foro do
-    domicílio do consumidor, quando aplicável por força do Código de
-    Defesa do Consumidor.</p>
+    Brasil. Fica eleito o foro da Comarca de Careiro, Estado do Amazonas,
+    para dirimir quaisquer controvérsias decorrentes destes Termos,
+    ressalvado o foro do domicílio do consumidor, quando aplicável por
+    força do Código de Defesa do Consumidor.</p>
 
     <h4>Política de Privacidade</h4>
 
     <p><strong>1. Introdução e Compromisso com a LGPD</strong></p>
-    <p>Esta Política de Privacidade descreve como o Agnails coleta, utiliza,
+    <p>Esta Política de Privacidade descreve como o Agnails, plataforma
+    oferecida pela startup Tecminia (em constituição), coleta, utiliza,
     armazena, compartilha e protege dados pessoais tratados na plataforma,
     em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº
     13.709/2018 – LGPD) e demais normas aplicáveis. O Agnails atua como
@@ -192,19 +206,26 @@ window.AGNAIL_TERMOS_HTML = `
     obrigações legais ou regulatórias, quando exigido por autoridade
     competente.</p>
 
-    <p><strong>4. Compartilhamento de Dados com Terceiros</strong></p>
+    <p><strong>4. Compartilhamento de Dados com Terceiros e Transferência Internacional</strong></p>
     <p>Os dados são armazenados em infraestrutura do Google Firebase
     (Google Cloud Platform), que atua como operador de dados sob instruções
     do Agnails e mantém seus próprios padrões de segurança e conformidade
-    internacional. Não vendemos, alugamos ou compartilhamos dados pessoais
-    com terceiros para fins de publicidade. Dados podem ser divulgados a
+    internacional. Essa infraestrutura pode implicar a transferência
+    internacional de dados para servidores localizados nos Estados Unidos
+    ou em outros países onde a Google mantém centros de dados. O Agnails
+    assegura que tais transferências são realizadas em conformidade com o
+    art. 33 da LGPD, mediante adoção de cláusulas contratuais padrão ou
+    outros mecanismos legais que garantam nível de proteção equivalente ao
+    previsto na legislação brasileira.</p>
+    <p>Não vendemos, alugamos ou compartilhamos dados pessoais com
+    terceiros para fins de publicidade. Dados podem ser divulgados a
     autoridades públicas quando exigido por lei, ordem judicial ou
     requisição administrativa legítima, e a prestadores de serviço
     estritamente necessários à operação da plataforma (por exemplo,
     infraestrutura de nuvem), sempre limitados ao necessário e sob
     obrigações contratuais de confidencialidade.</p>
 
-    <p><strong>5. Armazenamento e Segurança dos Dados</strong></p>
+    <p><strong>5. Armazenamento, Segurança, Backup e Incidentes</strong></p>
     <p>Os dados, incluindo imagens (fotos de perfil, logotipos e
     comprovantes de pagamento), são armazenados de forma estruturada no
     banco de dados Firestore, com compactação automática de imagens acima
@@ -215,6 +236,18 @@ window.AGNAIL_TERMOS_HTML = `
     dados contra acessos não autorizados, perda, alteração ou destruição
     indevida, ainda que nenhum sistema seja absolutamente imune a
     incidentes de segurança.</p>
+    <p>Realizamos backups periódicos dos dados armazenados na plataforma
+    para assegurar a continuidade do serviço e a possibilidade de
+    recuperação em caso de falhas ou incidentes. Os backups são
+    armazenados com os mesmos padrões de segurança e criptografia dos
+    dados originais e retidos pelo tempo estritamente necessário para as
+    finalidades de recuperação operacional.</p>
+    <p>Em caso de incidente de segurança que possa acarretar risco ou dano
+    relevante aos titulares de dados, o Agnails comunicará os titulares
+    afetados e a Autoridade Nacional de Proteção de Dados (ANPD), nos
+    termos do art. 48 da LGPD, informando a natureza do incidente, os
+    dados potencialmente afetados, as medidas de mitigação adotadas e as
+    recomendações aos titulares.</p>
 
     <p><strong>6. Retenção e Exclusão de Dados</strong></p>
     <p>Os dados são mantidos enquanto a conta estiver ativa. Ao solicitar a
@@ -227,7 +260,9 @@ window.AGNAIL_TERMOS_HTML = `
     removidos permanentemente do Firestore, não sendo possível a
     recuperação posterior. Dados de agendamentos de clientes vinculados a
     uma conta excluída definitivamente são removidos junto com os demais
-    dados da profissional.</p>
+    dados da profissional. A profissional poderá, antes de solicitar a
+    exclusão definitiva, requerer a exportação de seus dados, conforme
+    previsto nos Termos de Uso e no item 7 abaixo.</p>
 
     <p><strong>7. Direitos do Titular dos Dados</strong></p>
     <p>Nos termos da LGPD, o titular dos dados pessoais tem direito a:
@@ -240,7 +275,8 @@ window.AGNAIL_TERMOS_HTML = `
     sobre a possibilidade de não fornecer consentimento e suas
     consequências; e revogação do consentimento, quando aplicável. Esses
     direitos podem ser exercidos pelos canais de suporte informados no
-    painel ou pelo contato do encarregado de dados indicado abaixo.</p>
+    painel ou pelo contato do encarregado de dados indicado no item 11
+    abaixo.</p>
 
     <p><strong>8. Cookies e Armazenamento Local</strong></p>
     <p>A plataforma utiliza mecanismos de armazenamento local do navegador
@@ -266,6 +302,7 @@ window.AGNAIL_TERMOS_HTML = `
     <p><strong>11. Encarregado de Dados (DPO) e Contato</strong></p>
     <p>Dúvidas, solicitações relacionadas a dados pessoais ou o exercício
     dos direitos previstos na LGPD podem ser encaminhados ao Encarregado de
-    Proteção de Dados (DPO) do Agnails pelo e-mail [e-mail do encarregado] ou
-    pelos canais de suporte disponíveis no painel.</p>
+    Proteção de Dados (DPO) do Agnails pelo e-mail
+    <strong>tecminia@gmail.com</strong> ou pelos canais de suporte
+    disponíveis no painel da plataforma.</p>
 `;
