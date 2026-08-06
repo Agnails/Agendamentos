@@ -13,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-check-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="termos-conteudo.js"></script>
     <style>
@@ -1439,7 +1440,14 @@
                     const whatsapp = document.getElementById('configWhatsappInicial').value.replace(/\D/g, '');
                     const horarioInicio = document.getElementById('configHoraInicioInicial').value;
                     const horarioFim = document.getElementById('configHoraFimInicial').value;
-                    const intervalo = parseInt(document.getElementById('configIntervaloInicial').value) || 60;
+                    // [CORRIGIDO - MÉDIO] parseInt(...) || 60 só protegia
+                    // contra 0/vazio (0 é "falsy" em JS); um valor
+                    // negativo como "-5" passava direto. Agora o valor é
+                    // sempre limitado a 15–480 min, o mesmo intervalo que
+                    // a regra do Firestore passou a exigir — evita que o
+                    // formulário grave algo que o servidor rejeitaria.
+                    let intervalo = parseInt(document.getElementById('configIntervaloInicial').value) || 60;
+                    intervalo = Math.min(480, Math.max(15, intervalo));
                     const servicos = window._servicosIniciais || [];
 
                     const formasPagamento = [];
@@ -2057,7 +2065,14 @@
             salvarConfigAuto();
         });
         document.getElementById('configIntervalo').addEventListener('change', function() {
-            config.intervaloMinutos = parseInt(this.value) || 60;
+            // [CORRIGIDO - MÉDIO] Mesmo clamp de gerarSlots()/regra do
+            // Firestore: sem isso, um valor 0 ou negativo digitado direto
+            // (contornando o min="30" do <input>, que é só sugestão de
+            // UI) travava a página pública de agendamento desta manicure.
+            let valor = parseInt(this.value) || 60;
+            valor = Math.min(480, Math.max(15, valor));
+            this.value = valor;
+            config.intervaloMinutos = valor;
             salvarConfigAuto();
         });
 

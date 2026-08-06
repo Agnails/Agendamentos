@@ -260,10 +260,23 @@
     };
 
     window.AgnailsAdmin.liberarAcesso = async function (uid) {
+        // [CORRIGIDO] As regras do Firestore agora exigem que, para
+        // status "ativo", o campo "vencimento" seja uma data futura (ver
+        // assinaturaAtiva() em REGRAS_DE_SEGURANÇA.txt). Antes, este
+        // botão só setava acessoLiberado/status e deixava "vencimento"
+        // como estava — se a conta já tivesse um vencimento vencido (ou
+        // nunca tivesse um), a liberação "funcionava" na tela mas as
+        // escritas seguintes do painel da manicure (agendar, concluir
+        // atendimento etc.) continuavam sendo rejeitadas pelo servidor.
+        // Por padrão, dá-se 30 dias de acesso; o admin pode ajustar a
+        // data específica depois em "Salvar vencimento", se preferir.
+        const novoVencimento = new Date();
+        novoVencimento.setDate(novoVencimento.getDate() + 30);
         await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
-            acessoLiberado: true, status: 'ativo'
+            acessoLiberado: true, status: 'ativo',
+            vencimento: firebase.firestore.Timestamp.fromDate(novoVencimento)
         }, { merge: true });
-        mostrarToast('Acesso liberado.', 'sucesso');
+        mostrarToast('Acesso liberado (vencimento em 30 dias).', 'sucesso');
         document.getElementById('overlayDetalheManicure').classList.remove('show');
         carregarManicures();
     };

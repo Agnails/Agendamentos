@@ -21,6 +21,47 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
+/* ------------------------------------------------------------------------
+   [CORRIGIDO - MÉDIO: abuso/spam em endpoints públicos]
+   agendamentos.html permite CREATE sem login em "agendamentos",
+   "disponibilidade" e "clientes" (por desenho — o cliente final não faz
+   login). As regras do Firestore validam o FORMATO dos dados, mas não
+   têm como distinguir um navegador real de um script/bot automatizado.
+   Sem nenhuma camada extra, um bot poderia: (a) lotar a agenda de uma
+   manicure com reservas falsas, negando horários a clientes reais; ou
+   (b) criar centenas de agendamentos de spam.
+
+   O Firebase App Check resolve isso: cada requisição ao Firestore passa
+   a levar um token verificado (aqui, via reCAPTCHA v3) que prova que a
+   chamada vem de uma instância real da página, e não de um script batido
+   direto na API. A ativação abaixo é só o lado do CLIENTE — para
+   funcionar de fato como proteção, faltam dois passos únicos no Firebase
+   Console (fora do código, não repetíveis por arquivo):
+
+     1. Firebase Console > App Check > registrar este app com um
+        provedor reCAPTCHA v3, e colar a "site key" gerada lá no lugar de
+        RECAPTCHA_V3_SITE_KEY logo abaixo.
+     2. Firebase Console > App Check > Aplicar ("Enforce") para o produto
+        Firestore. Enquanto isso não for feito, o Firestore aceita
+        requisições com ou sem token válido de App Check — ou seja, a
+        troca da chave sozinha ainda não bloqueia nada, é só o passo 2
+        que liga a proteção de fato.
+
+   Por segurança, a ativação abaixo é protegida por try/catch e por uma
+   checagem de que o script do App Check foi carregado: se a chave ainda
+   não tiver sido configurada, ou o script não estiver incluído numa
+   página específica, o app continua funcionando normalmente (só sem
+   essa camada extra) em vez de quebrar.
+   ------------------------------------------------------------------------ */
+const AGNAIL_RECAPTCHA_V3_SITE_KEY = '6LeZynctAAAAAPS8DMMJiqvj7B2ldwuggpQ2qZC3'; // TROCAR antes de ir para produção
+try {
+  if (typeof firebase.appCheck === 'function' && AGNAIL_RECAPTCHA_V3_SITE_KEY !== 'RECAPTCHA_V3_SITE_KEY') {
+    firebase.appCheck().activate(AGNAIL_RECAPTCHA_V3_SITE_KEY, true);
+  }
+} catch (e) {
+  console.warn('App Check não pôde ser ativado (verifique a site key no Firebase Console):', e);
+}
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 const googleProvider = new firebase.auth.GoogleAuthProvider();

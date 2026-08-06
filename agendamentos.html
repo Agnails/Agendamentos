@@ -13,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-check-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="termos-conteudo.js"></script>
     <style>
@@ -983,11 +984,21 @@
         // ============ SLOTS ============
         function gerarSlots() {
             const slots = [];
+            // [CORRIGIDO - MÉDIO] intervaloMinutos <= 0 (ou horários não
+            // configurados) fazia o "for" abaixo nunca avançar/terminar,
+            // travando a aba do navegador de qualquer cliente que abrisse
+            // esta agenda. A regra do Firestore agora bloqueia a escrita
+            // desse valor inválido na origem (meta/configuracoes), mas
+            // este guard fica como segunda camada de defesa — por exemplo
+            // para contas com dados antigos, criados antes da regra valer.
+            if (!config.horarioInicio || !config.horarioFim) return slots;
             const [hIni, mIni] = config.horarioInicio.split(':').map(Number);
             const [hFim, mFim] = config.horarioFim.split(':').map(Number);
+            if ([hIni, mIni, hFim, mFim].some(n => Number.isNaN(n))) return slots;
             const inicioMinutos = hIni * 60 + mIni;
             const fimMinutos = hFim * 60 + mFim;
             const intervalo = config.intervaloMinutos || 60;
+            if (intervalo <= 0) return slots;
             for (let m = inicioMinutos; m + intervalo <= fimMinutos; m += intervalo) {
                 const h = Math.floor(m / 60);
                 const min = m % 60;
