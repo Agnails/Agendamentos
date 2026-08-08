@@ -75,6 +75,58 @@ const AGNAIL_ALVO_IMG_KB = 750;     // alvo pós-compactação
 const AGNAIL_DIAS_RETENCAO_EXCLUSAO = 90;
 
 /* ------------------------------------------------------------------------
+   [NOVO] Bloqueio de seleção/cópia de texto
+   Aplica-se a todas as páginas que carregam este arquivo (login, cobrança,
+   painel da manicure, painel administrativo, agendamento público e a
+   página inicial). É apenas uma camada de fricção de interface — não
+   substitui nenhum controle de segurança: qualquer pessoa com o DevTools
+   do navegador, "Exibir código-fonte" ou uma chamada direta à API do
+   Firestore continua acessando os dados normalmente. A segurança real do
+   app continua sendo garantida pelas regras do Firestore (ver
+   REGRAS_DE_SEGURANÇA.txt), que não dependem do que acontece na tela.
+   Campos de formulário (input, textarea, select, elementos com
+   contenteditable) ficam de fora da restrição, já que precisam de seleção
+   nativa para o usuário poder editar o próprio texto digitado, e links
+   (<a>) mantêm o menu de contexto para permitir "abrir em nova guia".
+   ------------------------------------------------------------------------ */
+(function agnailDesativarSelecaoDeTexto() {
+  const estilo = document.createElement('style');
+  estilo.textContent = `
+    * {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    input, textarea, select, [contenteditable="true"] {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+  `;
+  document.head.appendChild(estilo);
+
+  function permiteSelecao(el) {
+    if (!el || !el.closest) return false;
+    return !!el.closest('input, textarea, select, [contenteditable="true"]');
+  }
+  function permiteMenuContexto(el) {
+    if (!el || !el.closest) return false;
+    return !!el.closest('input, textarea, select, [contenteditable="true"], a');
+  }
+
+  ['copy', 'cut', 'selectstart'].forEach((evento) => {
+    document.addEventListener(evento, function (e) {
+      if (!permiteSelecao(e.target)) e.preventDefault();
+    });
+  });
+  document.addEventListener('contextmenu', function (e) {
+    if (!permiteMenuContexto(e.target)) e.preventDefault();
+  });
+})();
+
+/* ------------------------------------------------------------------------
    Autenticação
    ------------------------------------------------------------------------ */
 function agnailLoginGoogle() {
@@ -601,6 +653,57 @@ async function agnailEnviarComprovante(uid, file) {
   return pagamentoRef.id;
 }
 
+/* ------------------------------------------------------------------------
+   [NOVO] Modal de Suporte (e-mail + Instagram)
+   Compartilhado entre login.html (mostrado uma vez, logo após o modal de
+   boas-vindas do primeiro acesso), manicures.html (botão fixo em
+   Configurações) e agendamentos.html (link fixo no rodapé da página
+   pública). O elemento é criado sob demanda, na primeira chamada, e
+   reaproveitado nas chamadas seguintes — assim não é preciso duplicar o
+   HTML do modal em cada página. Como é adicionado como filho direto de
+   <body> com a classe "overlay", ele é automaticamente reconhecido pelo
+   script de bloqueio de fundo (agnailInicializarBloqueioFundo) já
+   presente em manicures.html e agendamentos.html.
+   ------------------------------------------------------------------------ */
+const AGNAIL_SUPORTE_EMAIL = 'tecminia@gmail.com';
+const AGNAIL_SUPORTE_INSTAGRAM_URL = 'https://instagram.com/agnails_saas';
+
+function agnailAbrirModalSuporte(aoFechar) {
+  let overlay = document.getElementById('overlaySuporteAgnail');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'overlaySuporteAgnail';
+    overlay.className = 'overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:500;';
+    overlay.innerHTML = `
+      <div style="background:var(--card,#fff); border-radius:var(--radius,20px); padding:30px 24px; max-width:380px; width:100%; text-align:center; box-shadow:var(--sombra-lg,0 12px 40px rgba(0,0,0,0.2)); position:relative; font-family:'Nunito',system-ui,sans-serif; color:var(--texto,#5d4a5c);">
+        <button id="btnFecharSuporteAgnail" type="button" style="position:absolute; top:12px; right:12px; width:32px; height:32px; border-radius:50%; border:none; background:var(--rosa-claro,#fbeaef); color:var(--rosa-escuro,#c47d8f); cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-xmark"></i></button>
+        <div style="font-size:2.2rem; margin-bottom:8px;">💬</div>
+        <h2 style="font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:500; margin-bottom:8px;">Precisa de ajuda?</h2>
+        <p style="color:var(--texto-claro,#8a7a89); font-size:0.88rem; line-height:1.5; margin-bottom:18px;">Fale com a gente por e-mail para dúvidas e reclamações, ou veja tutoriais de como usar o Agnails no nosso Instagram.</p>
+        <a href="mailto:${AGNAIL_SUPORTE_EMAIL}" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; border-radius:var(--radius-sm,12px); background:var(--rosa-escuro,#c47d8f); color:#fff; text-decoration:none; font-weight:600; font-size:0.9rem; margin-bottom:10px;"><i class="fa-solid fa-envelope"></i> ${AGNAIL_SUPORTE_EMAIL}</a>
+        <a href="${AGNAIL_SUPORTE_INSTAGRAM_URL}" target="_blank" rel="noopener" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; border-radius:var(--radius-sm,12px); background:#fff; color:var(--rosa-escuro,#c47d8f); border:2px solid var(--rosa,#e4a5b8); text-decoration:none; font-weight:600; font-size:0.9rem;"><i class="fa-brands fa-instagram"></i> @agnails_saas no Instagram</a>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const fechar = function () {
+      overlay.style.display = 'none';
+      overlay.classList.remove('active', 'show');
+      const callback = overlay._agnailAoFechar;
+      overlay._agnailAoFechar = null;
+      if (typeof callback === 'function') callback();
+    };
+    overlay.querySelector('#btnFecharSuporteAgnail').addEventListener('click', fechar);
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) fechar();
+    });
+  }
+  overlay._agnailAoFechar = aoFechar || null;
+  overlay.style.display = 'flex';
+  overlay.classList.add('active');
+}
+
 /* Exposição global (o app usa scripts clássicos, não ES modules) */
 window.Agnails = {
   auth, db,
@@ -631,5 +734,6 @@ window.Agnails = {
   solicitarExclusaoConta: agnailSolicitarExclusaoConta,
   excluirContaPermanentemente: agnailExcluirContaPermanentemente,
   liberarSlotsAgendamento: agnailLiberarSlotsAgendamento,
-  enviarComprovante: agnailEnviarComprovante
+  enviarComprovante: agnailEnviarComprovante,
+  abrirModalSuporte: agnailAbrirModalSuporte
 };

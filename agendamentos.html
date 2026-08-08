@@ -782,6 +782,7 @@
 <div class="toast" id="toast"></div>
 
 <div style="text-align:center; padding:16px 10px 90px; font-size:0.75rem;">
+    <a href="#" id="linkSuporteAgendamento" style="color:var(--texto-claro); text-decoration:underline; display:block; margin-bottom:8px;">Precisa de ajuda? Fale com o Suporte</a>
     <a href="#" id="linkConsultarTermosCliente" style="color:var(--texto-claro); text-decoration:underline;">Termos de Uso e Política de Privacidade</a>
 </div>
 
@@ -1025,16 +1026,46 @@
             return ocupados;
         }
 
+        // [NOVO] Antecedência mínima de agendamento: horários que já
+        // passaram, ou que estejam a menos de 12h do momento atual, não
+        // são exibidos como disponíveis — evita que alguém agende em cima
+        // da hora. Importante: esta checagem acontece só aqui, no
+        // front-end da página pública; as regras do Firestore hoje não
+        // validam isso (só validam formato/tamanho dos campos), então ela
+        // não é, sozinha, uma proteção contra alguém escrevendo direto na
+        // API por fora da página — o mesmo tipo de limitação que já existe
+        // hoje para outras validações deste arquivo (ver comentários das
+        // REGRAS_DE_SEGURANÇA.txt sobre "mitigação parcial").
+        const AGNAIL_ANTECEDENCIA_MINIMA_HORAS = 12;
+
+        function limiteMinimoAgendamento() {
+            const limite = new Date();
+            limite.setHours(limite.getHours() + AGNAIL_ANTECEDENCIA_MINIMA_HORAS);
+            return limite;
+        }
+
+        function horarioRespeitaAntecedencia(dataStr, horario) {
+            const [h, m] = horario.split(':').map(Number);
+            const dataHorario = new Date(dataStr + 'T00:00:00');
+            dataHorario.setHours(h, m, 0, 0);
+            return dataHorario.getTime() >= limiteMinimoAgendamento().getTime();
+        }
+
+        function getSlotsPermitidosPorHorario(dataStr) {
+            return gerarSlots().filter(s => horarioRespeitaAntecedencia(dataStr, s));
+        }
+
         function getStatusDia(dataStr) {
             if (isFolga(dataStr)) return 'folga';
-            const slots = gerarSlots();
-            if (slots.length === 0) return 'indisponivel';
+            const slotsPermitidos = getSlotsPermitidosPorHorario(dataStr);
+            if (slotsPermitidos.length === 0) return 'indisponivel';
             const ocupados = getSlotsOcupados(dataStr);
-            const livres = slots.filter(s => !ocupados.has(s));
+            const livres = slotsPermitidos.filter(s => !ocupados.has(s));
             return livres.length > 0 ? 'disponivel' : 'indisponivel';
         }
 
         function horarioDisponivel(dataStr, horario, duracaoTotal) {
+            if (!horarioRespeitaAntecedencia(dataStr, horario)) return false;
             const slots = gerarSlots();
             const interval = config.intervaloMinutos || 60;
             const numSlots = Math.ceil(duracaoTotal / interval);
@@ -1119,7 +1150,10 @@
 
         // ============ MODAL HORÁRIOS ============
         function abrirModalHorarios(dataStr) {
-            const slots = gerarSlots();
+            // Só considera horários que ainda não passaram e que respeitam
+            // a antecedência mínima de 12h — os demais nem aparecem na
+            // grade (ver getSlotsPermitidosPorHorario).
+            const slots = getSlotsPermitidosPorHorario(dataStr);
             const ocupados = getSlotsOcupados(dataStr);
             const livres = slots.filter(s => !ocupados.has(s));
 
@@ -1435,6 +1469,11 @@
         function fecharTodosModais() {
             document.querySelectorAll('.overlay').forEach(o => o.classList.remove('active'));
         }
+
+        document.getElementById('linkSuporteAgendamento').addEventListener('click', function(e) {
+            e.preventDefault();
+            Agnails.abrirModalSuporte();
+        });
 
         document.getElementById('linkConsultarTermosCliente').addEventListener('click', function(e) {
             e.preventDefault();

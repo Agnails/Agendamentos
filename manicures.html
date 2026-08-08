@@ -324,13 +324,35 @@
         .lista-financeiro { display:flex; flex-direction:column; gap:6px; }
         .financeiro-item {
             display:flex;
-            justify-content:space-between;
-            align-items:center;
-            padding:8px 12px;
+            flex-direction:column;
+            gap:3px;
+            padding:10px 14px;
             border-radius:var(--radius-xs);
             background:#fdfafc;
             border:1px solid #f0e6ec;
             font-size:0.85rem;
+        }
+        .financeiro-item .linha-topo-financeiro {
+            display:flex;
+            justify-content:space-between;
+            align-items:baseline;
+            gap:10px;
+        }
+        .financeiro-item .nome-cliente-financeiro {
+            font-weight:700;
+            color:var(--texto);
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+        .financeiro-item .valor-financeiro {
+            font-weight:700;
+            color:var(--verde-escuro);
+            flex-shrink:0;
+        }
+        .financeiro-item .linha-detalhe-financeiro {
+            font-size:0.78rem;
+            color:var(--texto-claro);
         }
 
         .config-section { margin-bottom:18px; }
@@ -791,6 +813,10 @@
         <form id="formConfigInicial">
             <div style="display:grid; gap:14px;">
                 <div class="form-group">
+                    <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-solid fa-signature"></i> Seu nome ou nome do salão *</label>
+                    <input type="text" id="configNomeInicial" placeholder="Ex: Ana Silva ou Studio da Ana" maxlength="50" required style="width:100%; padding:12px 14px; border-radius:var(--radius-xs); border:2px solid #e8dfe4; background:#fdfafb; font-size:0.95rem;">
+                </div>
+                <div class="form-group">
                     <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:4px;"><i class="fa-solid fa-image"></i> Foto de Perfil (opcional)</label>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                         <input type="file" id="configLogoInicial" accept="image/*" style="display:none;">
@@ -990,6 +1016,11 @@
             </div>
 
             <div class="config-section" style="margin-top:20px;">
+                <h3><i class="fa-solid fa-headset"></i> Suporte</h3>
+                <button class="btn btn-rosa btn-sm" id="btnAbrirSuporteConfig" type="button">Falar com o Suporte</button>
+            </div>
+
+            <div class="config-section" style="margin-top:20px;">
                 <h3><i class="fa-solid fa-file-contract"></i> Termos e Privacidade</h3>
                 <button class="btn btn-rosa btn-sm" id="btnConsultarTermos" type="button">Ver Termos e Privacidade</button>
             </div>
@@ -1121,6 +1152,10 @@
             overlay.style.alignItems = 'center';
             overlay.style.justifyContent = 'center';
 
+            // Pré-preenche com o nome da conta Google como sugestão, mas o
+            // campo fica editável — quem está cadastrando pode trocar pelo
+            // nome do salão ou como preferir aparecer para os clientes.
+            document.getElementById('configNomeInicial').value = usuarioAtual.displayName || '';
             document.getElementById('configSloganInicial').value = '';
             document.getElementById('configWhatsappInicial').value = '';
             document.getElementById('configHoraInicioInicial').value = '';
@@ -1243,6 +1278,19 @@
             agendamentos: agendamentosArr,
             financeiro: financeiroArr
         };
+
+        // [NOVO] Mantém o financeiro em tempo real: qualquer conclusão de
+        // atendimento (nesta aba ou em outro dispositivo logado na mesma
+        // conta) atualiza o cache local e, se a aba "Financeiro" estiver
+        // aberta no momento, recalcula os cards (Hoje/Mês/Ano) na hora.
+        manicureRef.collection('financeiro').onSnapshot((snap) => {
+            window._agnailCache.financeiro = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (document.getElementById('tab-financeiro').classList.contains('ativo')) {
+                const filtroInicioAtivo = document.getElementById('filtroInicio').value || null;
+                const filtroFimAtivo = document.getElementById('filtroFim').value || null;
+                carregarFinanceiro(filtroInicioAtivo, filtroFimAtivo);
+            }
+        });
 
         // Libera a tela (revela o painel principal)
         document.body.classList.remove('agnail-carregando');
@@ -1436,6 +1484,7 @@
 
                 document.getElementById('formConfigInicial').onsubmit = async function(e) {
                     e.preventDefault();
+                    const nomeInformado = document.getElementById('configNomeInicial').value.trim();
                     const slogan = document.getElementById('configSloganInicial').value.trim();
                     const whatsapp = document.getElementById('configWhatsappInicial').value.replace(/\D/g, '');
                     const horarioInicio = document.getElementById('configHoraInicioInicial').value;
@@ -1456,7 +1505,7 @@
                     const diasFolga = [];
                     document.querySelectorAll('#overlayConfigInicial .checkbox-group-2col input[type="checkbox"]:checked').forEach(cb => diasFolga.push(parseInt(cb.value)));
 
-                    if (!whatsapp || !horarioInicio || !horarioFim || servicos.length === 0 || formasPagamento.length === 0) {
+                    if (!nomeInformado || !whatsapp || !horarioInicio || !horarioFim || servicos.length === 0 || formasPagamento.length === 0) {
                         mostrarToastPainel('Preencha todos os campos obrigatórios.', 'erro');
                         return;
                     }
@@ -1470,7 +1519,10 @@
                     btnSubmit.innerHTML = 'Salvando...';
 
                     const imagemPerfil = window._logoInicial || '';
-                    const nomeEmpresaAuto = (perfil && (perfil.nomeEmpresa || perfil.nomeResponsavel)) || usuarioAtual.displayName || '';
+                    // [ALTERADO] O nome agora vem do campo digitado no
+                    // próprio formulário (item 3), em vez de assumir
+                    // automaticamente o nome associado à conta Google.
+                    const nomeEmpresaAuto = nomeInformado;
 
                     await manicureRef.collection('meta').doc('configuracoes').set({
                         nomeEmpresa: nomeEmpresaAuto,
@@ -1525,7 +1577,17 @@
             const lista = document.getElementById('listaAgendamentos');
             let filtrados = agendamentos;
             if (filtroData) {
+                // Com um filtro de data ativo, mostra todos os status
+                // daquele dia (agendado, concluído e cancelado) — é assim
+                // que um agendamento concluído/cancelado volta a aparecer.
                 filtrados = agendamentos.filter(a => a.data === filtroData);
+            } else {
+                // Sem filtro de data: oculta concluídos e cancelados da
+                // lista padrão, para manter o foco no que ainda precisa de
+                // ação. Nada é apagado — eles continuam no Firestore e no
+                // financeiro, só saem desta listagem até um filtro de data
+                // trazê-los de volta.
+                filtrados = agendamentos.filter(a => a.status === 'agendado');
             }
             filtrados.sort((a, b) => (a.data + a.horario).localeCompare(b.data + b.horario));
 
@@ -1766,7 +1828,14 @@
                 });
             }
 
-            const hojeStr = new Date().toISOString().slice(0,10);
+            // [CORRIGIDO] O card "Hoje" usava new Date().toISOString(), que
+            // é UTC — em fusos atrás de UTC (como o do Brasil), a partir do
+            // fim da tarde/início da noite local o dia em UTC já vira o
+            // seguinte, e o total "zerava" horas antes da virada real do
+            // dia. Agora a data de referência usa o mesmo padrão de data
+            // LOCAL já usado no resto do app (ex.: agendamentos.html).
+            const agoraFinanceiro = new Date();
+            const hojeStr = `${agoraFinanceiro.getFullYear()}-${String(agoraFinanceiro.getMonth()+1).padStart(2,'0')}-${String(agoraFinanceiro.getDate()).padStart(2,'0')}`;
             const mesAtual = hojeStr.slice(0,7);
             const anoAtual = hojeStr.slice(0,4);
             const totalHoje = financeiro.filter(f => f.data === hojeStr).reduce((s,f) => s + f.valor, 0);
@@ -1786,11 +1855,16 @@
             if (dados.length === 0) {
                 lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Nenhuma transação no período.</p>';
             } else {
+                // Formato: nome em destaque com o valor à direita na
+                // primeira linha; horário e data na linha de baixo. O tipo
+                // de serviço não é mais exibido aqui.
                 lista.innerHTML = dados.sort((a,b) => b.dataRegistro.localeCompare(a.dataRegistro)).map(f => `
                 <div class="financeiro-item">
-                  <span><strong>${Agnails.escaparHTML(f.cliente)}</strong> - ${new Date(f.data+'T00:00:00').toLocaleDateString('pt-BR')} ${Agnails.escaparHTML(f.horario)}</span>
-                  <span>${Agnails.escaparHTML((f.servicos || []).join(', '))}</span>
-                  <span style="font-weight:700;color:var(--verde-escuro);">R$ ${f.valor.toFixed(2)}</span>
+                  <div class="linha-topo-financeiro">
+                    <span class="nome-cliente-financeiro">${Agnails.escaparHTML(f.cliente)}</span>
+                    <span class="valor-financeiro">R$ ${f.valor.toFixed(2)}</span>
+                  </div>
+                  <div class="linha-detalhe-financeiro">${Agnails.escaparHTML(f.horario)} • ${new Date(f.data+'T00:00:00').toLocaleDateString('pt-BR')}</div>
                 </div>`).join('');
             }
         }
@@ -2089,6 +2163,11 @@
                 toast.classList.remove('show');
             }, 3000);
         }
+
+        // ============ SUPORTE ============
+        document.getElementById('btnAbrirSuporteConfig').addEventListener('click', function() {
+            Agnails.abrirModalSuporte();
+        });
 
         // ============ CONSULTAR TERMOS (sem bloquear, só para leitura) ============
         document.getElementById('btnConsultarTermos').addEventListener('click', function() {

@@ -146,7 +146,14 @@
                 document.getElementById('txtMensalidade').textContent =
                     'R$ ' + Number(configSistema.mensalidade || 50).toFixed(2).replace('.', ',');
                 overlayBoasVindas.classList.add('show');
-                document.getElementById('btnComecar').onclick = () => redirecionar(resultado.statusAcesso);
+                document.getElementById('btnComecar').onclick = () => {
+                    // Depois do aviso de boas-vindas/teste grátis, mostra o
+                    // modal de Suporte (e-mail + Instagram) uma vez; o
+                    // redirecionamento normal só acontece quando essa
+                    // pessoa fechar o modal de suporte.
+                    overlayBoasVindas.classList.remove('show');
+                    Agnails.abrirModalSuporte(() => redirecionar(resultado.statusAcesso));
+                };
             } else {
                 redirecionar(resultado.statusAcesso);
             }
