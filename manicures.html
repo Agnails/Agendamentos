@@ -916,6 +916,7 @@
             <div class="lista-agendamentos" id="listaAgendamentos">
                 <p style="color:var(--texto-claro);text-align:center;">Nenhum agendamento encontrado.</p>
             </div>
+            <div id="paginacaoAgendamentos"></div>
         </div>
     </div>
 
@@ -932,6 +933,7 @@
             <div class="lista-financeiro" id="listaFinanceiro">
                 <p style="color:var(--texto-claro);text-align:center;">Nenhuma transação no período.</p>
             </div>
+            <div id="paginacaoFinanceiro"></div>
         </div>
     </div>
 
@@ -1259,38 +1261,41 @@
         await aguardarCadastroInicial(perfilAtual);
 
         // ============ CACHE LOCAL (SINCRONIZADO COM O FIRESTORE) ============
-        // Carrega perfil/configurações/agendamentos/financeiro uma vez, e mantém
-        // um cache em memória para que o restante do app (que espera chamadas
-        // síncronas como getConfig()/getAgendamentos()) continue funcionando.
-        async function carregarColecao(nome) {
-            const snap = await manicureRef.collection(nome).get();
-            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        }
-
-        const [configuracoesDoc, agendamentosArr, financeiroArr] = await Promise.all([
-            Agnails.getConfiguracoes(usuarioAtual.uid),
-            carregarColecao('agendamentos'),
-            carregarColecao('financeiro')
-        ]);
+        // Configurações continuam em cache local (é um único documento
+        // pequeno). [ALTERADO] Agendamentos e Financeiro NÃO são mais
+        // carregados por inteiro aqui — cada aba busca só a página atual
+        // sob demanda (ver "PAGINAÇÃO: AGENDAMENTOS" e "PAGINAÇÃO:
+        // FINANCEIRO" mais abaixo), pra não baixar o histórico inteiro da
+        // conta a cada abertura do painel.
+        const configuracoesDoc = await Agnails.getConfiguracoes(usuarioAtual.uid);
 
         window._agnailCache = {
-            config: configuracoesDoc,
-            agendamentos: agendamentosArr,
-            financeiro: financeiroArr
+            config: configuracoesDoc
         };
 
-        // [NOVO] Mantém o financeiro em tempo real: qualquer conclusão de
-        // atendimento (nesta aba ou em outro dispositivo logado na mesma
-        // conta) atualiza o cache local e, se a aba "Financeiro" estiver
-        // aberta no momento, recalcula os cards (Hoje/Mês/Ano) na hora.
-        manicureRef.collection('financeiro').onSnapshot((snap) => {
-            window._agnailCache.financeiro = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            if (document.getElementById('tab-financeiro').classList.contains('ativo')) {
-                const filtroInicioAtivo = document.getElementById('filtroInicio').value || null;
-                const filtroFimAtivo = document.getElementById('filtroFim').value || null;
-                carregarFinanceiro(filtroInicioAtivo, filtroFimAtivo);
-            }
-        });
+        // [NOVO] Resumo do Financeiro em tempo real, mas limitado ao ano
+        // corrente (não à conta inteira desde o início): os cards
+        // Hoje/Este Mês/Este Ano/Média Mensal usam só esses documentos, e
+        // o listener atualiza automaticamente quando um atendimento é
+        // concluído — sem precisar reabrir a aba, e sem baixar todo o
+        // histórico de anos anteriores.
+        let _resumoFinanceiroAnoCache = [];
+        function anoAtualBounds() {
+            const ano = new Date().getFullYear();
+            return { inicio: `${ano}-01-01`, fim: `${ano + 1}-01-01` };
+        }
+        (function observarResumoFinanceiroAnoAtual() {
+            const { inicio, fim } = anoAtualBounds();
+            manicureRef.collection('financeiro')
+                .where('data', '>=', inicio)
+                .where('data', '<', fim)
+                .onSnapshot((snap) => {
+                    _resumoFinanceiroAnoCache = snap.docs.map(d => d.data());
+                    if (document.getElementById('tab-financeiro').classList.contains('ativo')) {
+                        atualizarCardsResumoFinanceiro();
+                    }
+                }, (erro) => console.error('Erro ao observar resumo financeiro:', erro));
+        })();
 
         // Libera a tela (revela o painel principal)
         document.body.classList.remove('agnail-carregando');
@@ -1429,38 +1434,17 @@
             return true;
         }
 
-        function sincronizarColecao(nome, antigos, novos) {
-            const idsNovos = new Set(novos.map(x => x.id));
-            const batch = Agnails.db.batch();
-            novos.forEach(item => {
-                const { id, ...dados } = item;
-                batch.set(manicureRef.collection(nome).doc(id), dados);
-            });
-            antigos.forEach(item => {
-                if (!idsNovos.has(item.id)) {
-                    batch.delete(manicureRef.collection(nome).doc(item.id));
-                }
-            });
-            batch.commit().catch(err => console.error('Erro ao sincronizar ' + nome + ':', err));
-        }
-
-        function getAgendamentos() {
-            return window._agnailCache.agendamentos;
-        }
-        function setAgendamentos(arr) {
-            const antigos = window._agnailCache.agendamentos;
-            window._agnailCache.agendamentos = arr;
-            sincronizarColecao('agendamentos', antigos, arr);
-        }
-
-        function getFinanceiro() {
-            return window._agnailCache.financeiro;
-        }
-        function setFinanceiro(arr) {
-            const antigos = window._agnailCache.financeiro;
-            window._agnailCache.financeiro = arr;
-            sincronizarColecao('financeiro', antigos, arr);
-        }
+        // [REMOVIDO] sincronizarColecao()/getAgendamentos()/setAgendamentos()/
+        // getFinanceiro()/setFinanceiro() reescreviam a coleção INTEIRA a
+        // cada mudança de status (comparando "antigos vs novos" pra
+        // decidir o que apagar). Isso tinha dois problemas sérios:
+        // (1) o Firestore tem limite de 500 operações por lote — com mais
+        // de 500 agendamentos acumulados, o lote falhava silenciosamente
+        // (o app mostrava "sucesso" mesmo sem salvar nada no servidor);
+        // (2) reescrever tudo pra mudar um único status é muito mais caro
+        // do que precisa ser. Agora cada ação (concluir, cancelar, novo
+        // lançamento financeiro) escreve só o documento específico — ver
+        // "PAGINAÇÃO: AGENDAMENTOS" e "PAGINAÇÃO: FINANCEIRO" abaixo.
 
         let config = getConfig();
 
@@ -1571,32 +1555,81 @@
             });
         });
 
-        // ============ AGENDAMENTOS ============
-        function carregarAgendamentos(filtroData = null) {
-            const agendamentos = getAgendamentos();
-            const lista = document.getElementById('listaAgendamentos');
-            let filtrados = agendamentos;
-            if (filtroData) {
-                // Com um filtro de data ativo, mostra todos os status
-                // daquele dia (agendado, concluído e cancelado) — é assim
-                // que um agendamento concluído/cancelado volta a aparecer.
-                filtrados = agendamentos.filter(a => a.data === filtroData);
-            } else {
-                // Sem filtro de data: oculta concluídos e cancelados da
-                // lista padrão, para manter o foco no que ainda precisa de
-                // ação. Nada é apagado — eles continuam no Firestore e no
-                // financeiro, só saem desta listagem até um filtro de data
-                // trazê-los de volta.
-                filtrados = agendamentos.filter(a => a.status === 'agendado');
-            }
-            filtrados.sort((a, b) => (a.data + a.horario).localeCompare(b.data + b.horario));
+        // ============ PAGINAÇÃO: AGENDAMENTOS ============
+        // [ALTERADO] Não carrega mais a coleção inteira: busca 20 por vez
+        // direto do Firestore (Agnails.criarPaginador, em
+        // firebase-config.js). Sem filtro de data, só mostra status
+        // "agendado" (concluídos/cancelados ficam ocultos — item 6 já
+        // implementado antes); com filtro de data, mostra todos os
+        // status daquele dia.
+        //
+        // [ÍNDICE NECESSÁRIO NO FIRESTORE] A consulta padrão (sem filtro
+        // de data) usa where('status','==','agendado').orderBy('data').
+        // Na primeira vez que isso rodar sem o índice composto
+        // (status ASC + data ASC) já criado, o Firestore mostra um erro
+        // no console com um link pra criar esse índice automaticamente —
+        // basta clicar uma vez.
+        let paginadorAgendamentos = null;
+        let filtroDataAgendaAtual = null;
+        let itensPaginaAtualAgendamentos = [];
 
-            if (filtrados.length === 0) {
+        function construirQueryAgendamentos(filtroData) {
+            if (filtroData) {
+                return manicureRef.collection('agendamentos').where('data', '==', filtroData);
+            }
+            return manicureRef.collection('agendamentos').where('status', '==', 'agendado').orderBy('data', 'asc');
+        }
+
+        function ordenarAgendamentosLocalmente(lista) {
+            return lista.slice().sort((a, b) => (a.data + a.horario).localeCompare(b.data + b.horario));
+        }
+
+        async function carregarAgendamentos(filtroData = null) {
+            const lista = document.getElementById('listaAgendamentos');
+            filtroDataAgendaAtual = filtroData;
+            paginadorAgendamentos = Agnails.criarPaginador(construirQueryAgendamentos(filtroData), 20);
+            lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Carregando...</p>';
+            document.getElementById('paginacaoAgendamentos').innerHTML = '';
+            try {
+                itensPaginaAtualAgendamentos = ordenarAgendamentosLocalmente(await paginadorAgendamentos.primeira());
+            } catch (e) {
+                console.error('Erro ao carregar agendamentos:', e);
+                lista.innerHTML = '<p style="color:var(--vermelho-escuro);text-align:center;">Não foi possível carregar os agendamentos. Tente novamente.</p>';
+                return;
+            }
+            renderizarListaAgendamentos(itensPaginaAtualAgendamentos);
+            Agnails.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
+        }
+
+        async function irParaProximaPaginaAgendamentos() {
+            if (!paginadorAgendamentos || !paginadorAgendamentos.temProxima()) return;
+            itensPaginaAtualAgendamentos = ordenarAgendamentosLocalmente(await paginadorAgendamentos.proxima());
+            renderizarListaAgendamentos(itensPaginaAtualAgendamentos);
+            Agnails.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
+        }
+        async function irParaPaginaAnteriorAgendamentos() {
+            if (!paginadorAgendamentos || !paginadorAgendamentos.temAnterior()) return;
+            itensPaginaAtualAgendamentos = ordenarAgendamentosLocalmente(await paginadorAgendamentos.anterior());
+            renderizarListaAgendamentos(itensPaginaAtualAgendamentos);
+            Agnails.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
+        }
+
+        async function recarregarListaAgendamentos() {
+            // Depois de concluir/cancelar, volta pra primeira página do
+            // filtro atual — o item que mudou de status normalmente sai
+            // da lista padrão mesmo, então recomeçar do início é o mais
+            // previsível.
+            await carregarAgendamentos(filtroDataAgendaAtual);
+        }
+
+        function renderizarListaAgendamentos(agendamentos) {
+            const lista = document.getElementById('listaAgendamentos');
+            if (agendamentos.length === 0) {
                 lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Nenhum agendamento encontrado.</p>';
                 return;
             }
 
-            lista.innerHTML = filtrados.map(a => {
+            lista.innerHTML = agendamentos.map(a => {
                 const dataObj = new Date(a.data + 'T' + a.horario);
                 const agora = new Date();
                 const diffMin = (agora - dataObj) / 60000;
@@ -1640,8 +1673,10 @@
 
         // ============ DETALHES ============
         window.abrirDetalhes = function(id) {
-            const agendamentos = getAgendamentos();
-            const ag = agendamentos.find(a => a.id === id);
+            // [ALTERADO] Busca só dentro da página atualmente carregada
+            // (itensPaginaAtualAgendamentos), já que é sempre de lá que o
+            // clique parte.
+            const ag = itensPaginaAtualAgendamentos.find(a => a.id === id);
             if (!ag) return;
 
             const overlay = document.getElementById('overlayDetalhes');
@@ -1709,28 +1744,33 @@
 
         // ============ CONCLUIR E CANCELAR ============
         window.concluirAgendamento = function(id) {
-            const agendamentos = getAgendamentos();
-            const ag = agendamentos.find(a => a.id === id);
+            const ag = itensPaginaAtualAgendamentos.find(a => a.id === id);
             if (!ag) return;
             abrirModalConclusao(ag);
         };
 
         window.cancelarAgendamentoPainel = async function(id) {
-            const agendamentos = getAgendamentos();
-            const idx = agendamentos.findIndex(a => a.id === id);
-            if (idx === -1) return;
+            const ag = itensPaginaAtualAgendamentos.find(a => a.id === id);
+            if (!ag) return;
             if (confirm('Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.')) {
-                const agendamentoCancelado = agendamentos[idx];
-                agendamentos[idx].status = 'cancelado';
-                setAgendamentos(agendamentos);
+                try {
+                    // [ALTERADO] Escreve só neste documento — não reescreve
+                    // mais a coleção inteira (corrige o limite de 500
+                    // operações por lote do Firestore e reduz o custo).
+                    await manicureRef.collection('agendamentos').doc(id).update({ status: 'cancelado' });
+                } catch (e) {
+                    console.error('Erro ao cancelar agendamento:', e);
+                    mostrarToastPainel('Erro ao cancelar. Tente novamente.', 'erro');
+                    return;
+                }
                 // Libera o(s) horário(s) na agenda pública para que outra
                 // pessoa possa reservá-los.
                 try {
-                    await Agnails.liberarSlotsAgendamento(usuarioAtual.uid, agendamentoCancelado);
+                    await Agnails.liberarSlotsAgendamento(usuarioAtual.uid, ag);
                 } catch (e) {
                     console.error('Erro ao liberar horário na agenda pública:', e);
                 }
-                carregarAgendamentos(document.getElementById('filtroDataAgenda').value || null);
+                await recarregarListaAgendamentos();
                 mostrarToastPainel('Agendamento cancelado.', 'sucesso');
             }
         };
@@ -1767,21 +1807,30 @@
             extraInput.addEventListener('input', atualizarTotal);
             descInput.addEventListener('input', atualizarTotal);
 
-            document.getElementById('btnConfirmarConclusao').onclick = function() {
+            document.getElementById('btnConfirmarConclusao').onclick = async function() {
                 const extra = parseFloat(extraInput.value) || 0;
                 const desc = parseFloat(descInput.value) || 0;
                 const totalFinal = Math.max(0, ag.valor + extra - desc);
-                const agendamentos = getAgendamentos();
-                const idx = agendamentos.findIndex(a => a.id === ag.id);
-                if (idx !== -1) {
-                    agendamentos[idx].status = 'concluido';
-                    agendamentos[idx].valorFinal = totalFinal;
-                    agendamentos[idx].valorExtra = extra;
-                    agendamentos[idx].desconto = desc;
-                    setAgendamentos(agendamentos);
-                    const financeiro = getFinanceiro();
-                    financeiro.push({
-                        id: 'fin_' + Date.now(),
+                const btnConfirmar = this;
+                btnConfirmar.disabled = true;
+                btnConfirmar.textContent = 'Salvando...';
+
+                // [ALTERADO] Um único lote com só 2 operações (atualizar o
+                // agendamento + criar o lançamento financeiro) — atômico
+                // (as duas escritas acontecem juntas ou nenhuma acontece)
+                // e nunca chega perto do limite de 500 do Firestore,
+                // porque o tamanho do lote não depende mais de quantos
+                // agendamentos existem no total.
+                const novoFinanceiroId = 'fin_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+                try {
+                    const batch = Agnails.db.batch();
+                    batch.update(manicureRef.collection('agendamentos').doc(ag.id), {
+                        status: 'concluido',
+                        valorFinal: totalFinal,
+                        valorExtra: extra,
+                        desconto: desc
+                    });
+                    batch.set(manicureRef.collection('financeiro').doc(novoFinanceiroId), {
                         agendamentoId: ag.id,
                         data: ag.data,
                         horario: ag.horario,
@@ -1790,13 +1839,19 @@
                         valor: totalFinal,
                         formaPagamento: ag.formaPagamento,
                         observacoes: ag.observacoes,
-                        dataRegistro: new Date().toISOString(),
+                        dataRegistro: new Date().toISOString()
                     });
-                    setFinanceiro(financeiro);
-                    overlay.classList.remove('active');
-                    carregarAgendamentos(document.getElementById('filtroDataAgenda').value || null);
-                    mostrarToastPainel('Atendimento concluído e registrado no financeiro!', 'sucesso');
+                    await batch.commit();
+                } catch (e) {
+                    console.error('Erro ao concluir agendamento:', e);
+                    mostrarToastPainel('Erro ao concluir. Tente novamente.', 'erro');
+                    btnConfirmar.disabled = false;
+                    btnConfirmar.textContent = 'Confirmar Conclusão';
+                    return;
                 }
+                overlay.classList.remove('active');
+                await recarregarListaAgendamentos();
+                mostrarToastPainel('Atendimento concluído e registrado no financeiro!', 'sucesso');
             };
         }
 
@@ -1816,57 +1871,93 @@
         });
 
         // ============ FINANCEIRO ============
-        function carregarFinanceiro(filtroInicio = null, filtroFim = null) {
-            const financeiro = getFinanceiro();
-            let dados = financeiro;
-            if (filtroInicio || filtroFim) {
-                dados = financeiro.filter(f => {
-                    const data = f.data;
-                    if (filtroInicio && data < filtroInicio) return false;
-                    if (filtroFim && data > filtroFim) return false;
-                    return true;
-                });
-            }
+        // [ALTERADO] A lista de transações agora é paginada de verdade
+        // (20 por vez, direto do Firestore, ordenada por data). Os cards
+        // de resumo (Hoje/Este Mês/Este Ano/Média Mensal) não usam mais o
+        // histórico inteiro — usam a busca leve limitada ao ano corrente
+        // (_resumoFinanceiroAnoCache, mantida em tempo real lá em cima,
+        // na seção CACHE LOCAL). Por causa disso, "Média Mensal" passou a
+        // significar "média deste ano até o mês atual" (antes era "média
+        // de todos os meses desde sempre") — fica mais barato de calcular
+        // e não cresce sem limite conforme o histórico acumula.
+        let paginadorFinanceiro = null;
 
-            // [CORRIGIDO] O card "Hoje" usava new Date().toISOString(), que
-            // é UTC — em fusos atrás de UTC (como o do Brasil), a partir do
-            // fim da tarde/início da noite local o dia em UTC já vira o
-            // seguinte, e o total "zerava" horas antes da virada real do
-            // dia. Agora a data de referência usa o mesmo padrão de data
-            // LOCAL já usado no resto do app (ex.: agendamentos.html).
-            const agoraFinanceiro = new Date();
-            const hojeStr = `${agoraFinanceiro.getFullYear()}-${String(agoraFinanceiro.getMonth()+1).padStart(2,'0')}-${String(agoraFinanceiro.getDate()).padStart(2,'0')}`;
-            const mesAtual = hojeStr.slice(0,7);
-            const anoAtual = hojeStr.slice(0,4);
-            const totalHoje = financeiro.filter(f => f.data === hojeStr).reduce((s,f) => s + f.valor, 0);
-            const totalMes = financeiro.filter(f => f.data.startsWith(mesAtual)).reduce((s,f) => s + f.valor, 0);
-            const totalAno = financeiro.filter(f => f.data.startsWith(anoAtual)).reduce((s,f) => s + f.valor, 0);
-            const meses = [...new Set(financeiro.map(f => f.data.slice(0,7)))];
-            const mediaMensal = meses.length ? (financeiro.reduce((s,f) => s + f.valor, 0) / meses.length) : 0;
+        function construirQueryFinanceiro(filtroInicio, filtroFim) {
+            let q = manicureRef.collection('financeiro');
+            if (filtroInicio) q = q.where('data', '>=', filtroInicio);
+            if (filtroFim) q = q.where('data', '<=', filtroFim);
+            return q.orderBy('data', 'desc');
+        }
+
+        function atualizarCardsResumoFinanceiro() {
+            const agora = new Date();
+            const hojeStr = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
+            const mesAtualStr = hojeStr.slice(0, 7);
+            const numeroMesAtual = agora.getMonth() + 1;
+
+            const dadosAno = _resumoFinanceiroAnoCache;
+            const totalHoje = dadosAno.filter(f => f.data === hojeStr).reduce((s, f) => s + f.valor, 0);
+            const totalMes = dadosAno.filter(f => f.data.startsWith(mesAtualStr)).reduce((s, f) => s + f.valor, 0);
+            const totalAno = dadosAno.reduce((s, f) => s + f.valor, 0);
+            const mediaMensal = totalAno / numeroMesAtual;
 
             document.getElementById('resumoFinanceiro').innerHTML = `
               <div class="resumo-card"><div class="valor">R$ ${totalHoje.toFixed(2)}</div><div class="label">Hoje</div></div>
               <div class="resumo-card"><div class="valor">R$ ${totalMes.toFixed(2)}</div><div class="label">Este Mês</div></div>
               <div class="resumo-card"><div class="valor">R$ ${totalAno.toFixed(2)}</div><div class="label">Este Ano</div></div>
-              <div class="resumo-card"><div class="valor">R$ ${mediaMensal.toFixed(2)}</div><div class="label">Média Mensal</div></div>
+              <div class="resumo-card"><div class="valor">R$ ${mediaMensal.toFixed(2)}</div><div class="label">Média Mensal (${hojeStr.slice(0,4)})</div></div>
             `;
+        }
+
+        function renderizarListaFinanceiro(itens) {
+            const lista = document.getElementById('listaFinanceiro');
+            if (itens.length === 0) {
+                lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Nenhuma transação no período.</p>';
+                return;
+            }
+            // Formato: nome em destaque com o valor à direita na primeira
+            // linha; horário e data na linha de baixo. O tipo de serviço
+            // não é mais exibido aqui.
+            lista.innerHTML = itens.map(f => `
+            <div class="financeiro-item">
+              <div class="linha-topo-financeiro">
+                <span class="nome-cliente-financeiro">${Agnails.escaparHTML(f.cliente)}</span>
+                <span class="valor-financeiro">R$ ${f.valor.toFixed(2)}</span>
+              </div>
+              <div class="linha-detalhe-financeiro">${Agnails.escaparHTML(f.horario)} • ${new Date(f.data+'T00:00:00').toLocaleDateString('pt-BR')}</div>
+            </div>`).join('');
+        }
+
+        async function carregarFinanceiro(filtroInicio = null, filtroFim = null) {
+            atualizarCardsResumoFinanceiro();
 
             const lista = document.getElementById('listaFinanceiro');
-            if (dados.length === 0) {
-                lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Nenhuma transação no período.</p>';
-            } else {
-                // Formato: nome em destaque com o valor à direita na
-                // primeira linha; horário e data na linha de baixo. O tipo
-                // de serviço não é mais exibido aqui.
-                lista.innerHTML = dados.sort((a,b) => b.dataRegistro.localeCompare(a.dataRegistro)).map(f => `
-                <div class="financeiro-item">
-                  <div class="linha-topo-financeiro">
-                    <span class="nome-cliente-financeiro">${Agnails.escaparHTML(f.cliente)}</span>
-                    <span class="valor-financeiro">R$ ${f.valor.toFixed(2)}</span>
-                  </div>
-                  <div class="linha-detalhe-financeiro">${Agnails.escaparHTML(f.horario)} • ${new Date(f.data+'T00:00:00').toLocaleDateString('pt-BR')}</div>
-                </div>`).join('');
+            paginadorFinanceiro = Agnails.criarPaginador(construirQueryFinanceiro(filtroInicio, filtroFim), 20);
+            lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Carregando...</p>';
+            document.getElementById('paginacaoFinanceiro').innerHTML = '';
+            let itens;
+            try {
+                itens = await paginadorFinanceiro.primeira();
+            } catch (e) {
+                console.error('Erro ao carregar financeiro:', e);
+                lista.innerHTML = '<p style="color:var(--vermelho-escuro);text-align:center;">Não foi possível carregar as transações. Tente novamente.</p>';
+                return;
             }
+            renderizarListaFinanceiro(itens);
+            Agnails.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
+        }
+
+        async function irParaProximaPaginaFinanceiro() {
+            if (!paginadorFinanceiro || !paginadorFinanceiro.temProxima()) return;
+            const itens = await paginadorFinanceiro.proxima();
+            renderizarListaFinanceiro(itens);
+            Agnails.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
+        }
+        async function irParaPaginaAnteriorFinanceiro() {
+            if (!paginadorFinanceiro || !paginadorFinanceiro.temAnterior()) return;
+            const itens = await paginadorFinanceiro.anterior();
+            renderizarListaFinanceiro(itens);
+            Agnails.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
         }
 
         document.getElementById('aplicarFiltroFinanceiro').addEventListener('click', () => {
@@ -1898,9 +1989,25 @@
             renderizarDiasFolgaConfig();
             renderizarFolgasEspecificas();
             carregarSelectCancelar();
-            const link = window.location.origin + window.location.pathname.replace('manicures.html', 'agendamentos.html') + '?m=' + usuarioAtual.uid;
+            // [NOVO] O link inclui o nome do estabelecimento (slugificado,
+            // sem acentos/espaços) só para ficar legível quando
+            // compartilhado — quem realmente identifica a manicure é o
+            // "m=<uid>", que não muda mesmo que o nome seja alterado
+            // depois. Links já compartilhados antes continuam funcionando.
+            const nomeSlug = agnailSlugificar(config.nomeEmpresa) || 'agnails';
+            const link = window.location.origin + window.location.pathname.replace('manicures.html', 'agendamentos.html') + '?nome=' + nomeSlug + '&m=' + usuarioAtual.uid;
             document.getElementById('linkCompartilhar').value = link;
             initTemas();
+        }
+
+        function agnailSlugificar(texto) {
+            return (texto || '')
+                .toString()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 60);
         }
 
         function renderizarServicosConfig() {
@@ -2040,33 +2147,54 @@
             mostrarToastPainel('Folga adicionada.', 'sucesso');
         });
 
-        function carregarSelectCancelar() {
-            const agendamentos = getAgendamentos().filter(a => a.status === 'agendado');
+        // [ALTERADO] Este combo não depende mais da lista paginada da aba
+        // Agendamentos (que só carrega 20 por vez) — faz uma busca leve e
+        // separada, limitada a 200 agendamentos pendentes (bem mais do
+        // que uma agenda costuma acumular de "agendado" ao mesmo tempo),
+        // reaproveitando o mesmo índice composto (status + data) da
+        // consulta padrão da aba Agendamentos.
+        let itensSelectCancelar = [];
+        async function carregarSelectCancelar() {
             const select = document.getElementById('selectCancelarAgendamento');
+            try {
+                const snap = await manicureRef.collection('agendamentos')
+                    .where('status', '==', 'agendado')
+                    .orderBy('data', 'asc')
+                    .limit(200)
+                    .get();
+                itensSelectCancelar = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            } catch (e) {
+                console.error('Erro ao carregar combo de cancelamento:', e);
+                itensSelectCancelar = [];
+            }
             select.innerHTML = '<option value="">Selecione um agendamento...</option>' +
-                agendamentos.map(a =>
+                itensSelectCancelar.map(a =>
                     `<option value="${Agnails.escaparAtributo(a.id)}">${Agnails.escaparHTML(a.nome)} - ${new Date(a.data+'T00:00:00').toLocaleDateString('pt-BR')} ${Agnails.escaparHTML(a.horario)}</option>`
                 ).join('');
         }
         document.getElementById('btnCancelarAgendamento').addEventListener('click', async () => {
             const id = document.getElementById('selectCancelarAgendamento').value;
             if (!id) return;
+            const agendamentoCancelado = itensSelectCancelar.find(a => a.id === id);
+            if (!agendamentoCancelado) return;
             if (confirm('Cancelar este agendamento?')) {
-                const agendamentos = getAgendamentos();
-                const idx = agendamentos.findIndex(a => a.id === id);
-                if (idx !== -1) {
-                    const agendamentoCancelado = agendamentos[idx];
-                    agendamentos[idx].status = 'cancelado';
-                    setAgendamentos(agendamentos);
-                    try {
-                        await Agnails.liberarSlotsAgendamento(usuarioAtual.uid, agendamentoCancelado);
-                    } catch (e) {
-                        console.error('Erro ao liberar horário na agenda pública:', e);
-                    }
-                    carregarSelectCancelar();
-                    carregarAgendamentos();
-                    mostrarToastPainel('Agendamento cancelado.', 'sucesso');
+                try {
+                    // [ALTERADO] Escreve só neste documento, não reescreve
+                    // mais a coleção inteira.
+                    await manicureRef.collection('agendamentos').doc(id).update({ status: 'cancelado' });
+                } catch (e) {
+                    console.error('Erro ao cancelar agendamento:', e);
+                    mostrarToastPainel('Erro ao cancelar. Tente novamente.', 'erro');
+                    return;
                 }
+                try {
+                    await Agnails.liberarSlotsAgendamento(usuarioAtual.uid, agendamentoCancelado);
+                } catch (e) {
+                    console.error('Erro ao liberar horário na agenda pública:', e);
+                }
+                await carregarSelectCancelar();
+                await recarregarListaAgendamentos();
+                mostrarToastPainel('Agendamento cancelado.', 'sucesso');
             }
         });
 

@@ -15,7 +15,11 @@
 (function () {
     let adminAtual = null;
     let configSistemaCache = null;
-    let manicuresCache = [];
+    // [ALTERADO] Não guarda mais a lista inteira de manicures — só a
+    // página atualmente carregada (50 no máximo) e o paginador que sabe
+    // buscar a próxima/anterior direto do Firestore.
+    let itensPaginaAtualManicures = [];
+    let paginadorManicures = null;
 
     function mostrarToast(msg, tipo) {
         const t = document.getElementById('toast');
@@ -131,13 +135,25 @@
     });
 
     /* ---------------- DASHBOARD: LISTA DE MANICURES ---------------- */
-    async function carregarManicures() {
-        const usuariosSnap = await Agnails.db.collection('usuarios').where('tipo', '==', 'manicure').get();
-        const lista = [];
+    // [ALTERADO] Não busca mais TODAS as manicures de uma vez — pagina de
+    // verdade, 50 por página, direto do Firestore (Agnails.criarPaginador,
+    // em firebase-config.js). Isso limita o custo de "1 + 3×N" leituras
+    // (perfil + assinatura por manicure) a "1 + 3×50" por página, em vez
+    // de crescer para sempre com o total de contas cadastradas.
+    //
+    // [ÍNDICE NECESSÁRIO NO FIRESTORE] A consulta usa
+    // where('tipo','==','manicure').orderBy('criadoEm','desc') — na
+    // primeira vez que rodar sem o índice composto (tipo ASC + criadoEm
+    // DESC) já existir, o Firestore mostra um erro no console com um
+    // link pra criar esse índice com um clique.
+    function construirQueryManicures() {
+        return Agnails.db.collection('usuarios').where('tipo', '==', 'manicure').orderBy('criadoEm', 'desc');
+    }
 
-        for (const doc of usuariosSnap.docs) {
-            const uid = doc.id;
-            const usuario = doc.data();
+    async function buscarDetalhesManicures(usuarios) {
+        const lista = [];
+        for (const usuario of usuarios) {
+            const uid = usuario.id;
             const [perfil, assinatura] = await Promise.all([
                 Agnails.getPerfilCompleto(uid),
                 Agnails.getAssinatura(uid)
@@ -145,25 +161,88 @@
             const statusAcesso = Agnails.calcularStatusAcesso(assinatura);
             lista.push({ uid, usuario, perfil, assinatura, statusAcesso });
         }
-        manicuresCache = lista;
-        renderizarStats(lista);
-        renderizarListaManicures(lista);
+        return lista;
     }
 
-    function renderizarStats(lista) {
-        const total = lista.length;
+    async function carregarManicures() {
+        const container = document.getElementById('listaManicures');
+        paginadorManicures = Agnails.criarPaginador(construirQueryManicures(), 50);
+        container.innerHTML = '<div class="vazio">Carregando...</div>';
+        document.getElementById('paginacaoManicures').innerHTML = '';
+        let usuarios;
+        try {
+            usuarios = await paginadorManicures.primeira();
+        } catch (e) {
+            console.error('Erro ao carregar manicures:', e);
+            container.innerHTML = '<div class="vazio">Não foi possível carregar a lista. Tente novamente.</div>';
+            return;
+        }
+        itensPaginaAtualManicures = await buscarDetalhesManicures(usuarios);
+        renderizarListaManicures(itensPaginaAtualManicures);
+        renderizarStatsPagina(itensPaginaAtualManicures);
+        Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
+        carregarTotalGeralManicures(); // não bloqueia o resto: atualiza o card sozinho quando terminar
+    }
+
+    async function irParaProximaPaginaManicures() {
+        if (!paginadorManicures || !paginadorManicures.temProxima()) return;
+        const usuarios = await paginadorManicures.proxima();
+        itensPaginaAtualManicures = await buscarDetalhesManicures(usuarios);
+        renderizarListaManicures(itensPaginaAtualManicures);
+        renderizarStatsPagina(itensPaginaAtualManicures);
+        Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
+    }
+    async function irParaPaginaAnteriorManicures() {
+        if (!paginadorManicures || !paginadorManicures.temAnterior()) return;
+        const usuarios = await paginadorManicures.anterior();
+        itensPaginaAtualManicures = await buscarDetalhesManicures(usuarios);
+        renderizarListaManicures(itensPaginaAtualManicures);
+        renderizarStatsPagina(itensPaginaAtualManicures);
+        Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
+    }
+    // Recarrega a MESMA página depois de uma ação (bloquear, liberar,
+    // aprovar pagamento etc.) — evita jogar o admin de volta pra página 1
+    // toda vez que uma ação pontual é feita numa página mais adiante.
+    async function recarregarPaginaAtualManicures() {
+        if (!paginadorManicures) { await carregarManicures(); return; }
+        const usuarios = await paginadorManicures.recarregarAtual();
+        itensPaginaAtualManicures = await buscarDetalhesManicures(usuarios);
+        renderizarListaManicures(itensPaginaAtualManicures);
+        renderizarStatsPagina(itensPaginaAtualManicures);
+        Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
+    }
+
+    function renderizarStatsPagina(lista) {
         const ativos = lista.filter(m => m.statusAcesso.status === 'ativo').length;
         const teste = lista.filter(m => m.statusAcesso.status === 'teste_gratuito').length;
         const pendentes = lista.filter(m => m.statusAcesso.status === 'aguardando_aprovacao').length;
         const expirados = lista.filter(m => m.statusAcesso.status === 'expirado').length;
 
+        // [ALTERADO] "Manicures cadastradas" é o único número realmente
+        // GLOBAL (vem de uma contagem separada — ver
+        // carregarTotalGeralManicures). Os outros 4 números refletem só a
+        // página atual (até 50), porque o status de acesso mora numa
+        // subcoleção por manicure e não dá pra contar globalmente sem ler
+        // cada uma — que é exatamente o custo que a paginação evita.
+        // Rotulados como "nesta página" para não parecerem totais gerais.
         document.getElementById('statsGrid').innerHTML = `
-            <div class="stat-card"><div class="num">${total}</div><div class="lbl">Manicures cadastradas</div></div>
-            <div class="stat-card"><div class="num">${ativos}</div><div class="lbl">Planos ativos</div></div>
-            <div class="stat-card"><div class="num">${teste}</div><div class="lbl">Em teste grátis</div></div>
-            <div class="stat-card"><div class="num">${pendentes}</div><div class="lbl">Aguardando aprovação</div></div>
-            <div class="stat-card"><div class="num">${expirados}</div><div class="lbl">Expirados</div></div>
+            <div class="stat-card"><div class="num" id="statTotalGeralManicures">…</div><div class="lbl">Manicures cadastradas</div></div>
+            <div class="stat-card"><div class="num">${ativos}</div><div class="lbl">Planos ativos (nesta página)</div></div>
+            <div class="stat-card"><div class="num">${teste}</div><div class="lbl">Em teste grátis (nesta página)</div></div>
+            <div class="stat-card"><div class="num">${pendentes}</div><div class="lbl">Aguardando aprovação (nesta página)</div></div>
+            <div class="stat-card"><div class="num">${expirados}</div><div class="lbl">Expirados (nesta página)</div></div>
         `;
+    }
+
+    async function carregarTotalGeralManicures() {
+        const elemento = document.getElementById('statTotalGeralManicures');
+        try {
+            const snap = await Agnails.db.collection('usuarios').where('tipo', '==', 'manicure').count().get();
+            if (elemento) elemento.textContent = snap.data().count;
+        } catch (e) {
+            console.error('Erro ao contar total de manicures:', e);
+            if (elemento) elemento.textContent = '—';
+        }
     }
 
     function renderizarListaManicures(lista) {
@@ -204,7 +283,7 @@
     window.AgnailsAdmin = window.AgnailsAdmin || {};
 
     window.AgnailsAdmin.abrirDetalhe = function (uid) {
-        const m = manicuresCache.find(x => x.uid === uid);
+        const m = itensPaginaAtualManicures.find(x => x.uid === uid);
         if (!m) return;
         const nome = Agnails.escaparHTML(m.perfil?.nomeEmpresa || m.usuario.nome || 'Sem nome');
         const responsavel = Agnails.escaparHTML(m.perfil?.nomeResponsavel || '-');
@@ -247,7 +326,7 @@
         }, { merge: true });
         mostrarToast('Vencimento atualizado!', 'sucesso');
         document.getElementById('overlayDetalheManicure').classList.remove('show');
-        carregarManicures();
+        recarregarPaginaAtualManicures();
     };
 
     window.AgnailsAdmin.bloquearAcesso = async function (uid) {
@@ -256,7 +335,7 @@
         }, { merge: true });
         mostrarToast('Acesso bloqueado.', 'sucesso');
         document.getElementById('overlayDetalheManicure').classList.remove('show');
-        carregarManicures();
+        recarregarPaginaAtualManicures();
     };
 
     window.AgnailsAdmin.liberarAcesso = async function (uid) {
@@ -278,7 +357,7 @@
         }, { merge: true });
         mostrarToast('Acesso liberado (vencimento em 30 dias).', 'sucesso');
         document.getElementById('overlayDetalheManicure').classList.remove('show');
-        carregarManicures();
+        recarregarPaginaAtualManicures();
     };
 
     /* ---------------- PAGAMENTOS PENDENTES ---------------- */
@@ -339,12 +418,24 @@
         const obs = document.getElementById('obs-' + pagamentoId)?.value || '';
         const agora = firebase.firestore.Timestamp.now();
 
+        // [ALTERADO] Antes buscava o vencimento atual em manicuresCache
+        // (a lista completa em memória). Com a lista paginada, a
+        // manicure sendo aprovada aqui pode não estar na página
+        // atualmente carregada — por isso agora busca só o documento de
+        // assinatura dela, direto (uma leitura simples e barata).
+        let vencimentoAtual = null;
+        try {
+            const assinaturaSnap = await Agnails.manicureRef(uid).collection('meta').doc('assinatura').get();
+            if (assinaturaSnap.exists && assinaturaSnap.data().vencimento) {
+                vencimentoAtual = assinaturaSnap.data().vencimento.toDate();
+            }
+        } catch (e) {
+            console.error('Erro ao buscar assinatura para aprovação:', e);
+        }
         // A validade sempre soma 30 dias por mensalidade. Se a assinatura
         // atual ainda não venceu, os 30 dias somam a partir do vencimento
         // atual (para não "perder" dias já pagos); caso já tenha expirado,
         // conta a partir de hoje.
-        const assinaturaAtual = manicuresCache.find(m => m.uid === uid)?.assinatura;
-        const vencimentoAtual = assinaturaAtual?.vencimento ? assinaturaAtual.vencimento.toDate() : null;
         const baseData = (vencimentoAtual && vencimentoAtual.getTime() > Date.now()) ? vencimentoAtual : new Date();
         const novoVencimento = new Date(baseData);
         novoVencimento.setDate(novoVencimento.getDate() + 30);
@@ -362,7 +453,7 @@
 
         mostrarToast('Pagamento aprovado!', 'sucesso');
         carregarPagamentosPendentes();
-        carregarManicures();
+        recarregarPaginaAtualManicures();
     };
 
     window.AgnailsAdmin.rejeitarPagamento = async function (uid, pagamentoId) {
@@ -377,7 +468,7 @@
 
         mostrarToast('Pagamento rejeitado.', 'sucesso');
         carregarPagamentosPendentes();
-        carregarManicures();
+        recarregarPaginaAtualManicures();
     };
 
     /* ---------------- CONTAS PENDENTES DE EXCLUSÃO ---------------- */
@@ -427,15 +518,21 @@
         await Agnails.db.collection('administracao').doc('contasPendentesExclusao').collection('contas').doc(uid).delete();
         mostrarToast('Conta reativada!', 'sucesso');
         carregarContasExclusao();
-        carregarManicures();
+        recarregarPaginaAtualManicures();
     };
 
     window.AgnailsAdmin.excluirPermanente = async function (uid) {
         if (!confirm('Esta ação é irreversível e removerá todos os dados desta manicure. Continuar?')) return;
-        await Agnails.excluirContaPermanentemente(uid);
+        try {
+            await Agnails.excluirContaPermanentemente(uid);
+        } catch (e) {
+            console.error('Erro ao excluir conta permanentemente:', e);
+            mostrarToast('Erro ao excluir a conta. Tente novamente.', 'erro');
+            return;
+        }
         mostrarToast('Conta excluída permanentemente.', 'sucesso');
         carregarContasExclusao();
-        carregarManicures();
+        recarregarPaginaAtualManicures();
     };
 
     /* ---------------- CONFIGURAÇÕES GLOBAIS ---------------- */

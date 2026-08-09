@@ -583,12 +583,28 @@ async function agnailSolicitarExclusaoConta(uid, emailUsuario) {
  * Painel Administrativo (adm.html), após os 90 dias de retenção.
  */
 async function agnailExcluirContaPermanentemente(uid) {
+  // [CORRIGIDO] Contas com mais de 500 documentos numa mesma subcoleção
+  // (ex.: agendamentos ou financeiro acumulados ao longo dos anos)
+  // faziam essa exclusão falhar: o Firestore rejeita lotes com mais de
+  // 500 operações, e o código antigo tentava apagar a subcoleção
+  // inteira num único lote. Agora apaga em blocos de até 500 por vez,
+  // repetindo busca+exclusão até a subcoleção ficar vazia — funciona
+  // independentemente de quantos documentos existirem no total.
+  const TAMANHO_MAXIMO_LOTE = 500; // limite de operações por batch no Firestore
   const subcolecoes = ['servicos', 'clientes', 'agendamentos', 'disponibilidade', 'financeiro', 'pagamentos', 'notificacoes', 'meta'];
   for (const nome of subcolecoes) {
-    const snap = await agnailManicureRef(uid).collection(nome).get();
-    const batch = db.batch();
-    snap.docs.forEach((d) => batch.delete(d.ref));
-    if (!snap.empty) await batch.commit();
+    let continuar = true;
+    while (continuar) {
+      const snap = await agnailManicureRef(uid).collection(nome).limit(TAMANHO_MAXIMO_LOTE).get();
+      if (snap.empty) { continuar = false; break; }
+      const batch = db.batch();
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      // Se voltou um bloco cheio (500), provavelmente ainda tem mais —
+      // busca de novo (os que acabaram de ser apagados já não vêm mais).
+      // Se voltou menos que isso, essa foi a última leva.
+      continuar = snap.docs.length === TAMANHO_MAXIMO_LOTE;
+    }
   }
   await db.collection('usuarios').doc(uid).delete();
   await db.collection('administracao').doc('contasPendentesExclusao').collection('contas').doc(uid).delete();
@@ -704,6 +720,84 @@ function agnailAbrirModalSuporte(aoFechar) {
   overlay.classList.add('active');
 }
 
+/* ------------------------------------------------------------------------
+   [NOVO] Paginação real (cursor-based) reutilizável
+   Usada em manicures.html (Agendamentos e Financeiro, 20/página) e
+   admin-sistema.js (lista de manicures, 50/página). Em vez de carregar a
+   coleção inteira e cortar no cliente, cada "página" busca só os
+   documentos daquele bloco direto do Firestore, usando .limit()/
+   .startAfter() — o que a rules engine do Firestore avalia exatamente
+   como qualquer outra leitura (a paginação não muda quem pode ler o quê,
+   só quantos documentos vêm de uma vez).
+
+   Navegação é só "anterior/próxima" (sem pular direto pra página N), o
+   que é suficiente para as listas do app e evita ter que sustentar um
+   cursor por página arbitrária.
+   ------------------------------------------------------------------------ */
+function agnailCriarPaginador(queryBase, tamanhoPagina) {
+  let cursores = [];       // cursores[i] = último documento da página i
+  let paginaAtualIndex = -1;
+  let ultimaPaginaCheia = true;
+
+  async function buscarPagina(index) {
+    let q = queryBase.limit(tamanhoPagina);
+    if (index > 0) {
+      const cursorAnterior = cursores[index - 1];
+      if (!cursorAnterior) return [];
+      q = q.startAfter(cursorAnterior);
+    }
+    const snap = await q.get();
+    if (snap.docs.length > 0) {
+      cursores[index] = snap.docs[snap.docs.length - 1];
+    }
+    ultimaPaginaCheia = snap.docs.length === tamanhoPagina;
+    paginaAtualIndex = index;
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
+
+  return {
+    primeira: () => { cursores = []; paginaAtualIndex = -1; return buscarPagina(0); },
+    proxima: () => (paginaAtualIndex >= 0 && ultimaPaginaCheia) ? buscarPagina(paginaAtualIndex + 1) : Promise.resolve([]),
+    anterior: () => (paginaAtualIndex > 0) ? buscarPagina(paginaAtualIndex - 1) : Promise.resolve([]),
+    recarregarAtual: () => (paginaAtualIndex >= 0) ? buscarPagina(paginaAtualIndex) : Promise.resolve([]),
+    temProxima: () => paginaAtualIndex >= 0 && ultimaPaginaCheia,
+    temAnterior: () => paginaAtualIndex > 0,
+    numeroPagina: () => paginaAtualIndex + 1
+  };
+}
+
+/**
+ * Renderiza os botões "‹ Anterior" / "Próxima ›" dentro de um container.
+ * Usa estilo inline (com fallback de cor) para funcionar em qualquer
+ * página sem depender das variáveis CSS específicas de cada arquivo.
+ */
+function agnailRenderizarControlesPaginacao(containerId, paginador, callbackAnterior, callbackProxima) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const pagina = paginador.numeroPagina();
+  const temAnterior = paginador.temAnterior();
+  const temProxima = paginador.temProxima();
+
+  if (pagina <= 1 && !temProxima) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const estiloBase = "padding:8px 16px;border-radius:50px;border:2px solid var(--rosa,#e4a5b8);background:#fff;color:var(--rosa-escuro,#c47d8f);font-family:'Nunito',system-ui,sans-serif;font-weight:600;font-size:0.82rem;cursor:pointer;";
+  const estiloDesabilitado = 'opacity:0.4;cursor:not-allowed;';
+
+  container.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 0;';
+  container.innerHTML = `
+    <button type="button" id="${containerId}_anterior" style="${estiloBase}${temAnterior ? '' : estiloDesabilitado}" ${temAnterior ? '' : 'disabled'}>‹ Anterior</button>
+    <span style="font-size:0.82rem;color:var(--texto-claro,#8a7a89);font-weight:600;">Página ${pagina}</span>
+    <button type="button" id="${containerId}_proxima" style="${estiloBase}${temProxima ? '' : estiloDesabilitado}" ${temProxima ? '' : 'disabled'}>Próxima ›</button>
+  `;
+  const btnAnterior = document.getElementById(containerId + '_anterior');
+  const btnProxima = document.getElementById(containerId + '_proxima');
+  if (btnAnterior && temAnterior) btnAnterior.addEventListener('click', callbackAnterior);
+  if (btnProxima && temProxima) btnProxima.addEventListener('click', callbackProxima);
+}
+
 /* Exposição global (o app usa scripts clássicos, não ES modules) */
 window.Agnails = {
   auth, db,
@@ -735,5 +829,7 @@ window.Agnails = {
   excluirContaPermanentemente: agnailExcluirContaPermanentemente,
   liberarSlotsAgendamento: agnailLiberarSlotsAgendamento,
   enviarComprovante: agnailEnviarComprovante,
-  abrirModalSuporte: agnailAbrirModalSuporte
+  abrirModalSuporte: agnailAbrirModalSuporte,
+  criarPaginador: agnailCriarPaginador,
+  renderizarControlesPaginacao: agnailRenderizarControlesPaginacao
 };
