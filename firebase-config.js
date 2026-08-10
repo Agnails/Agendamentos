@@ -271,7 +271,26 @@ async function agnailProcessarComprovante(file) {
     return agnailProcessarImagem(file);
   }
 
-  const base64 = await agnailArquivoParaBase64(file);
+  const base64Bruto = await agnailArquivoParaBase64(file);
+
+  // [CORRIGIDO - CRÍTICO: PDF legítimo rejeitado com "Missing or
+  // insufficient permissions"] FileReader.readAsDataURL() monta a string
+  // como "data:<file.type>;base64,...", usando o MIME que o NAVEGADOR
+  // detectou para o arquivo — não necessariamente "application/pdf". Em
+  // vários cenários reais (arquivo baixado do app do banco, encaminhado
+  // por WhatsApp/e-mail, certas combinações de navegador/SO) file.type
+  // vem vazio ou genérico ("application/octet-stream"), mesmo sendo um
+  // PDF de verdade. agnailArquivoEhPdf() já tem um fallback pela extensão
+  // ".pdf" e reconhece esses casos corretamente, mas a string final
+  // continuava dependendo do MIME "adivinhado" pelo navegador — que podia
+  // não bater com a regra do Firestore (que exige literalmente o prefixo
+  // "data:application/pdf;base64,"), causando permission-denied mesmo com
+  // a regra certa publicada. Agora o prefixo é sempre forçado para
+  // "application/pdf" quando agnailArquivoEhPdf() já confirmou que é PDF,
+  // independente do que o navegador detectou.
+  const dadosBase64 = (base64Bruto.split(',')[1] || '');
+  const base64 = `data:application/pdf;base64,${dadosBase64}`;
+
   const tamanhoKB = agnailBase64SizeKB(base64);
   if (tamanhoKB > AGNAIL_MAX_PDF_KB) {
     throw new Error(
