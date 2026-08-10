@@ -72,6 +72,16 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 const AGNAIL_DIAS_TESTE_PADRAO = 15;
 const AGNAIL_MAX_IMG_KB = 800;      // acima disso, compacta
 const AGNAIL_ALVO_IMG_KB = 750;     // alvo pós-compactação
+// [NOVO] Limite para comprovantes em PDF, medido no resultado já em
+// Base64 (mesma unidade que a regra do Firestore usa). Diferente de uma
+// imagem, um PDF não pode ser recomprimido via <canvas> — não existe
+// equivalente de "reduzir qualidade/dimensões" para esse formato aqui no
+// navegador — então, ao contrário de agnailProcessarImagem, um PDF acima
+// do limite é simplesmente rejeitado com uma mensagem clara, em vez de
+// compactado. O valor fica abaixo dos 950.000 bytes exigidos pela regra
+// em pagamentos/{id}.comprovante (ver REGRAS_DE_SEGURANÇA.txt), com folga
+// de segurança para o overhead de Base64 e o prefixo "data:...;base64,".
+const AGNAIL_MAX_PDF_KB = 800;
 const AGNAIL_DIAS_RETENCAO_EXCLUSAO = 90;
 
 /* ------------------------------------------------------------------------
@@ -172,17 +182,31 @@ function agnailCarregarImagem(src) {
 
 /**
  * Converte um File de imagem em Base64, compactando automaticamente se o
- * arquivo original for maior que AGNAIL_MAX_IMG_KB, até aproximar-se de
+ * resultado em Base64 for maior que AGNAIL_MAX_IMG_KB, até aproximar-se de
  * AGNAIL_ALVO_IMG_KB.
  * @param {File} file
  * @returns {Promise<string>} data URL em Base64
  */
 async function agnailProcessarImagem(file) {
   if (!file) return '';
-  const tamanhoOriginalKB = file.size / 1024;
 
   const base64Original = await agnailArquivoParaBase64(file);
-  if (tamanhoOriginalKB <= AGNAIL_MAX_IMG_KB) {
+
+  /* [CORRIGIDO - CRÍTICO: comprovantes de ~712KB a 800KB eram rejeitados
+     silenciosamente] A checagem antiga comparava file.size (bytes reais
+     do arquivo) com AGNAIL_MAX_IMG_KB, mas Base64 tem ~33% de overhead
+     sobre o tamanho original — um arquivo de 800KB vira ~1.065KB em
+     Base64. Isso fazia arquivos "dentro do limite" (ex.: 750KB) passarem
+     direto SEM compactação, gerando uma string maior que os 950.000
+     bytes exigidos pela regra do Firestore em pagamentos/{id}.comprovante
+     (ver REGRAS_DE_SEGURANÇA.txt). O resultado era um permission-denied
+     silencioso, específico de fotos nessa faixa de tamanho — intermitente
+     e difícil de reproduzir, porque dependia do arquivo escolhido.
+     Agora a comparação usa o tamanho REAL em Base64 (a mesma unidade que
+     a regra do Firestore mede), então qualquer imagem que ficaria acima
+     do limite passa pela compactação abaixo antes de ser enviada. */
+  const tamanhoBase64KB = agnailBase64SizeKB(base64Original);
+  if (tamanhoBase64KB <= AGNAIL_MAX_IMG_KB) {
     return base64Original;
   }
 
@@ -213,6 +237,49 @@ async function agnailProcessarImagem(file) {
     }
   }
   return resultado;
+}
+
+/* ------------------------------------------------------------------------
+   [NOVO] Comprovante de pagamento em PDF
+   Alguns bancos só disponibilizam o comprovante em PDF (sem opção de
+   print/imagem), então o upload de comprovante (cobranca.html) aceita
+   tanto imagem quanto PDF. Usa file.type quando disponível e cai para a
+   extensão do nome do arquivo como reforço, já que alguns navegadores/SOs
+   deixam file.type vazio para certos tipos de arquivo.
+   ------------------------------------------------------------------------ */
+function agnailArquivoEhPdf(file) {
+  if (!file) return false;
+  if (file.type === 'application/pdf') return true;
+  return /\.pdf$/i.test(file.name || '');
+}
+
+/**
+ * Processa o arquivo de um comprovante de pagamento, aceitando imagem OU
+ * PDF: imagens seguem o fluxo normal de compactação (agnailProcessarImagem);
+ * PDFs são apenas convertidos para Base64 e validados contra
+ * AGNAIL_MAX_PDF_KB, pois não há como recomprimir um PDF no navegador — se
+ * o arquivo for grande demais, a Promise rejeita com uma mensagem
+ * amigável (em vez de deixar a rejeição acontecer "seca", só na regra do
+ * Firestore, depois de já ter subido tudo).
+ * @param {File} file
+ * @returns {Promise<string>} data URL em Base64 (image/* ou application/pdf)
+ */
+async function agnailProcessarComprovante(file) {
+  if (!file) return '';
+
+  if (!agnailArquivoEhPdf(file)) {
+    return agnailProcessarImagem(file);
+  }
+
+  const base64 = await agnailArquivoParaBase64(file);
+  const tamanhoKB = agnailBase64SizeKB(base64);
+  if (tamanhoKB > AGNAIL_MAX_PDF_KB) {
+    throw new Error(
+      `Este PDF está muito grande (${Math.round(tamanhoKB)}KB). ` +
+      `Envie um arquivo de até ${AGNAIL_MAX_PDF_KB}KB, ou tire uma foto/print do comprovante em vez do PDF.`
+    );
+  }
+  return base64;
 }
 
 /* ------------------------------------------------------------------------
@@ -638,7 +705,9 @@ async function agnailLiberarSlotsAgendamento(uid, agendamento) {
    Pagamentos / cobrança
    ------------------------------------------------------------------------ */
 async function agnailEnviarComprovante(uid, file) {
-  const base64 = await agnailProcessarImagem(file);
+  // [ALTERADO] Aceita imagem OU PDF — alguns bancos só disponibilizam o
+  // comprovante em PDF. Ver agnailProcessarComprovante logo acima.
+  const base64 = await agnailProcessarComprovante(file);
   const agora = firebase.firestore.Timestamp.now();
 
   const competencia = new Date().toISOString().slice(0, 7); // YYYY-MM
@@ -813,6 +882,7 @@ window.Agnails = {
   escaparHTML: agnailEscaparHTML,
   escaparAtributo: agnailEscaparAtributo,
   processarImagem: agnailProcessarImagem,
+  processarComprovante: agnailProcessarComprovante,
   getConfigSistema: agnailGetConfigSistema,
   setConfigSistema: agnailSetConfigSistema,
   manicureRef: agnailManicureRef,

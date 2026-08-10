@@ -52,6 +52,9 @@
     .preview-comprovante { display:none; margin-bottom:14px; text-align:center; }
     .preview-comprovante img { max-width:100%; max-height:220px; border-radius:var(--radius-sm); box-shadow:var(--sombra); }
     .preview-comprovante.show { display:block; }
+    .preview-pdf { display:none; align-items:center; justify-content:center; gap:10px; background:var(--rosa-claro); border-radius:var(--radius-sm); padding:18px 14px; }
+    .preview-pdf i { font-size:1.8rem; color:var(--rosa-escuro); }
+    .preview-pdf span { font-weight:700; color:var(--rosa-escuro); font-size:0.9rem; word-break:break-all; }
 
     .btn { width:100%; padding:14px; border:none; border-radius:var(--radius-sm); font-family:'Nunito',sans-serif; font-weight:600; font-size:0.95rem; cursor:pointer; transition:var(--transition); }
     .btn-primario { background:var(--rosa-escuro); color:#fff; }
@@ -116,11 +119,15 @@
 
             <div class="upload-area" id="uploadArea">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
-                <span>Toque para enviar o comprovante</span>
-                <input type="file" id="inputComprovante" accept="image/*" style="display:none;">
+                <span>Toque para enviar o comprovante (imagem ou PDF)</span>
+                <input type="file" id="inputComprovante" accept="image/*,.pdf,application/pdf" style="display:none;">
             </div>
             <div class="preview-comprovante" id="previewComprovante">
                 <img id="imgComprovante" src="" alt="Comprovante">
+                <div class="preview-pdf" id="previewPdfComprovante">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span id="nomeArquivoPdf"></span>
+                </div>
             </div>
 
             <button class="btn btn-primario" id="btnEnviarComprovante" disabled>Enviar comprovante</button>
@@ -226,13 +233,31 @@
         const file = e.target.files[0];
         if (!file) return;
         arquivoSelecionado = file;
-        const reader = new FileReader();
-        reader.onload = function (ev) {
-            document.getElementById('imgComprovante').src = ev.target.result;
+
+        const ehPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+        const imgEl = document.getElementById('imgComprovante');
+        const pdfEl = document.getElementById('previewPdfComprovante');
+
+        if (ehPdf) {
+            // PDF não pode ser exibido num <img> — mostra um cartão com o
+            // nome do arquivo em vez de tentar pré-visualizar o conteúdo.
+            imgEl.style.display = 'none';
+            imgEl.src = '';
+            document.getElementById('nomeArquivoPdf').textContent = file.name;
+            pdfEl.style.display = 'flex';
             document.getElementById('previewComprovante').classList.add('show');
             document.getElementById('btnEnviarComprovante').disabled = false;
-        };
-        reader.readAsDataURL(file);
+        } else {
+            pdfEl.style.display = 'none';
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                imgEl.style.display = 'block';
+                imgEl.src = ev.target.result;
+                document.getElementById('previewComprovante').classList.add('show');
+                document.getElementById('btnEnviarComprovante').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
     });
 
     document.getElementById('btnEnviarComprovante').addEventListener('click', async function () {
@@ -250,7 +275,11 @@
             document.getElementById('overlayConfirmacao').classList.add('show');
         } catch (e) {
             console.error(e);
-            mostrarToast('Erro ao enviar comprovante. Tente novamente.', 'erro');
+            // [ALTERADO] agnailProcessarComprovante lança um erro com
+            // mensagem amigável quando um PDF é grande demais (ex.: "Este
+            // PDF está muito grande..."); mostra essa mensagem específica
+            // quando existir, em vez do texto genérico sempre.
+            mostrarToast((e && e.message) ? e.message : 'Erro ao enviar comprovante. Tente novamente.', 'erro');
         } finally {
             btn.disabled = false;
             btn.textContent = 'Enviar comprovante';

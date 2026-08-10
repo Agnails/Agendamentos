@@ -20,6 +20,12 @@
     // buscar a próxima/anterior direto do Firestore.
     let itensPaginaAtualManicures = [];
     let paginadorManicures = null;
+    // [NOVO] Cache em memória dos comprovantes PDF da página atual de
+    // pagamentos pendentes, indexado por pagamentoId. Evita embutir a
+    // string Base64 inteira (pode ter centenas de KB) dentro de um
+    // atributo onclick="..." no HTML — o botão só passa o pagamentoId, e
+    // a função de abrir busca o conteúdo aqui.
+    let comprovantesPdfCache = {};
 
     function mostrarToast(msg, tipo) {
         const t = document.getElementById('toast');
@@ -371,6 +377,7 @@
         }
 
         const cartoes = [];
+        comprovantesPdfCache = {}; // reseta a cada carregamento da lista
         for (const item of pendentesSnap.docs) {
             const { uid, pagamentoId } = item.data();
             const pagamentoSnap = await Agnails.manicureRef(uid).collection('pagamentos').doc(pagamentoId).get();
@@ -381,10 +388,26 @@
             const perfil = await Agnails.getPerfil(uid);
             const nome = Agnails.escaparHTML(perfil?.nomeEmpresa || uid);
             const competencia = Agnails.escaparHTML(pagamento.competencia || '');
+            // [ALTERADO] Comprovante agora pode ser imagem OU PDF —
+            // alguns bancos só disponibilizam o comprovante nesse formato
+            // (ver agnailProcessarComprovante em firebase-config.js e a
+            // regra de pagamentos em REGRAS_DE_SEGURANÇA.txt).
+            const comprovanteEhPdf = typeof pagamento.comprovante === 'string' &&
+                /^data:application\/pdf;base64,/i.test(pagamento.comprovante);
             const comprovanteSeguro = (typeof pagamento.comprovante === 'string' &&
-                /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(pagamento.comprovante))
+                /^data:(image\/(png|jpe?g|webp|gif)|application\/pdf);base64,/i.test(pagamento.comprovante))
                 ? pagamento.comprovante
                 : '';
+
+            let blocoComprovante;
+            if (!comprovanteSeguro) {
+                blocoComprovante = `<p style="color:var(--vermelho-escuro); font-size:0.82rem;">Comprovante inválido ou corrompido — peça um novo envio.</p>`;
+            } else if (comprovanteEhPdf) {
+                comprovantesPdfCache[pagamentoId] = comprovanteSeguro;
+                blocoComprovante = `<button type="button" class="btn-abrir-pdf" onclick="AgnailsAdmin.abrirComprovantePdf('${pagamentoId}')"><i class="fa-solid fa-file-pdf"></i> Abrir comprovante (PDF)</button>`;
+            } else {
+                blocoComprovante = `<img class="comprovante-img" src="${comprovanteSeguro}" onclick="AgnailsAdmin.ampliarComprovante(this.src)">`;
+            }
 
             cartoes.push(`
                 <div class="pagamento-card">
@@ -393,9 +416,7 @@
                         <span class="valor">R$ ${Number(pagamento.valor || 0).toFixed(2).replace('.', ',')}</span>
                     </div>
                     <div style="font-size:0.8rem; color:var(--texto-claro);">Competência: ${competencia} • Enviado em ${formatarData(pagamento.enviadoEm)}</div>
-                    ${comprovanteSeguro
-                        ? `<img class="comprovante-img" src="${comprovanteSeguro}" onclick="AgnailsAdmin.ampliarComprovante(this.src)">`
-                        : `<p style="color:var(--vermelho-escuro); font-size:0.82rem;">Comprovante inválido ou corrompido — peça um novo envio.</p>`}
+                    ${blocoComprovante}
                     <textarea class="obs" id="obs-${pagamentoId}" placeholder="Observações (opcional)"></textarea>
                     <div class="acoes-pagamento">
                         <button class="btn-aprovar" onclick="AgnailsAdmin.aprovarPagamento('${uid}','${pagamentoId}')">Aprovar</button>
@@ -413,6 +434,35 @@
     };
     document.getElementById('fecharComprovanteAmpliado').addEventListener('click', () =>
         document.getElementById('overlayComprovanteAmpliado').classList.remove('show'));
+
+    // [NOVO] Abre um comprovante em PDF numa nova aba. Converte o Base64
+    // para Blob (via URL.createObjectURL) em vez de simplesmente navegar
+    // para a "data:" URL diretamente — navegadores modernos (Chrome
+    // incluído) bloqueiam ou tratam de forma inconsistente a navegação
+    // top-level direto para uma "data:" URL longa; um Blob URL é o jeito
+    // confiável de abrir/baixar conteúdo binário gerado no próprio
+    // navegador. A URL do Blob é revogada depois de um tempo para não
+    // vazar memória.
+    window.AgnailsAdmin.abrirComprovantePdf = function (pagamentoId) {
+        const base64 = comprovantesPdfCache[pagamentoId];
+        if (!base64) {
+            mostrarToast('Não foi possível abrir o comprovante. Atualize a lista e tente novamente.', 'erro');
+            return;
+        }
+        try {
+            const partes = base64.split(',');
+            const binario = atob(partes[1] || '');
+            const bytes = new Uint8Array(binario.length);
+            for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank', 'noopener');
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch (e) {
+            console.error('Erro ao abrir comprovante em PDF:', e);
+            mostrarToast('Não foi possível abrir o comprovante em PDF.', 'erro');
+        }
+    };
 
     window.AgnailsAdmin.aprovarPagamento = async function (uid, pagamentoId) {
         const obs = document.getElementById('obs-' + pagamentoId)?.value || '';
@@ -487,6 +537,28 @@
             const uid = doc.id;
             const usuario = await Agnails.getUsuario(uid);
             if (!usuario) continue;
+
+            // [CORRIGIDO - BAIXO: contas já reativadas continuavam
+            // aparecendo aqui] Quando a própria manicure restaura a conta
+            // fazendo login de novo dentro dos 90 dias
+            // (agnailProcessarPosLogin, em firebase-config.js), o app
+            // tenta apagar este ponteiro em
+            // administracao/contasPendentesExclusao/contas/{uid} — mas
+            // "allow delete" nesse caminho é só para o admin
+            // (REGRAS_DE_SEGURANÇA.txt), então esse delete sempre falha
+            // (é protegido por .catch(() => {}), então não quebra o
+            // login, só deixa o ponteiro órfão). O usuário já volta a
+            // "statusConta: 'ativa'" no documento de usuários — usamos
+            // isso aqui para detectar o órfão, removê-lo (o admin tem
+            // permissão) e não exibir uma conta que já foi restaurada
+            // como se ainda estivesse pendente de exclusão.
+            if (usuario.statusConta !== 'exclusao_solicitada') {
+                Agnails.db.collection('administracao').doc('contasPendentesExclusao')
+                    .collection('contas').doc(uid).delete()
+                    .catch((e) => console.error('Erro ao limpar ponteiro de exclusão órfão:', e));
+                continue;
+            }
+
             const diasDecorridos = Math.floor((Date.now() - dados.dataSolicitacaoExclusao.toDate()) / 86400000);
             const disponivelHoje = Date.now() >= dados.dataExclusaoPermitida.toDate().getTime();
 
@@ -507,7 +579,7 @@
                 </div>
             `);
         }
-        container.innerHTML = cartoes.join('');
+        container.innerHTML = cartoes.length ? cartoes.join('') : '<div class="vazio">Nenhuma conta pendente de exclusão.</div>';
     }
 
     window.AgnailsAdmin.reativarConta = async function (uid) {
