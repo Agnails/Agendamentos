@@ -22,30 +22,44 @@ if (!firebase.apps.length) {
 }
 
 /* ------------------------------------------------------------------------
-   [CORRIGIDO - MÉDIO: abuso/spam em endpoints públicos]
+   [ATUALIZADO v8 - status confirmado no Console] abuso/spam em endpoints
+   públicos
    agendamentos.html permite CREATE sem login em "agendamentos",
    "disponibilidade" e "clientes" (por desenho — o cliente final não faz
-   login). As regras do Firestore validam o FORMATO dos dados, mas não
-   têm como distinguir um navegador real de um script/bot automatizado.
-   Sem nenhuma camada extra, um bot poderia: (a) lotar a agenda de uma
-   manicure com reservas falsas, negando horários a clientes reais; ou
-   (b) criar centenas de agendamentos de spam.
+   login). As regras do Firestore validam o FORMATO dos dados (e, desde a
+   v8, também uma janela plausível de datas em "disponibilidade" — ver
+   REGRAS_DE_SEGURANÇA.txt), mas sozinhas não têm como distinguir um
+   navegador real de um script/bot automatizado. Por isso a mitigação de
+   bot/spam de fato depende do Firebase App Check.
 
-   O Firebase App Check resolve isso: cada requisição ao Firestore passa
-   a levar um token verificado (aqui, via reCAPTCHA v3) que prova que a
-   chamada vem de uma instância real da página, e não de um script batido
-   direto na API. A ativação abaixo é só o lado do CLIENTE — para
-   funcionar de fato como proteção, faltam dois passos únicos no Firebase
-   Console (fora do código, não repetíveis por arquivo):
+   Status confirmado no Firebase Console (reconferir após qualquer
+   mudança relevante de tráfego):
+     1. App "AgNails" registrado com provedor reCAPTCHA — a site key
+        abaixo já é a chave real gerada no Console, não é mais um
+        placeholder a trocar.
+     2. Cloud Firestore: nos últimos 7 dias, ~96% das solicitações
+        chegaram com token verificado e 0% caíram em "origem
+        desconhecida" ou "solicitações inválidas" — dado suficiente para
+        manter o modo "Aplicar" (Enforce) ativado. Se ao conferir o
+        Console o Firestore ainda estiver em "Monitorando", mude para
+        "Aplicar": Console > App Check > aba APIs > Cloud Firestore.
+        Enquanto estiver só "Monitorando", o Firestore aceita requisições
+        com ou sem token válido — ou seja, não bloqueia nada de fato.
+     3. Authentication (recurso em pré-lançamento): chegou a mostrar uma
+        fatia de "origem desconhecida" (tráfego que o próprio Firebase
+        descreve como podendo ser forjado, sem o SDK oficial) acima de
+        zero. Manter em "Monitorando" até esse número cair de forma
+        consistente antes de aplicar Enforce também aqui — aplicar cedo
+        demais tem mais risco de bloquear login legítimo do que de
+        impedir algo real.
 
-     1. Firebase Console > App Check > registrar este app com um
-        provedor reCAPTCHA v3, e colar a "site key" gerada lá no lugar de
-        RECAPTCHA_V3_SITE_KEY logo abaixo.
-     2. Firebase Console > App Check > Aplicar ("Enforce") para o produto
-        Firestore. Enquanto isso não for feito, o Firestore aceita
-        requisições com ou sem token válido de App Check — ou seja, a
-        troca da chave sozinha ainda não bloqueia nada, é só o passo 2
-        que liga a proteção de fato.
+   Importante: mesmo com o Firestore em Enforce, o App Check eleva o
+   custo de um ataque automatizado, não o elimina matematicamente, e não
+   substitui validação de dados no servidor. Os dois riscos que
+   dependiam só de App Check (bloqueio de agenda via "disponibilidade" e
+   valor inflado em "agendamentos") já têm mitigação adicional nas regras
+   desde a v8; a correção completa de ambos continua exigindo uma Cloud
+   Function.
 
    Por segurança, a ativação abaixo é protegida por try/catch e por uma
    checagem de que o script do App Check foi carregado: se a chave ainda
@@ -53,7 +67,7 @@ if (!firebase.apps.length) {
    página específica, o app continua funcionando normalmente (só sem
    essa camada extra) em vez de quebrar.
    ------------------------------------------------------------------------ */
-const AGNAIL_RECAPTCHA_V3_SITE_KEY = '6LeZynctAAAAAPS8DMMJiqvj7B2ldwuggpQ2qZC3'; // TROCAR antes de ir para produção
+const AGNAIL_RECAPTCHA_V3_SITE_KEY = '6LeZynctAAAAAPS8DMMJiqvj7B2ldwuggpQ2qZC3'; // Site key confirmada no Console — não é mais placeholder
 try {
   if (typeof firebase.appCheck === 'function' && AGNAIL_RECAPTCHA_V3_SITE_KEY !== 'RECAPTCHA_V3_SITE_KEY') {
     firebase.appCheck().activate(AGNAIL_RECAPTCHA_V3_SITE_KEY, true);
