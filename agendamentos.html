@@ -811,6 +811,16 @@
     })();
 
     (async function() {
+        // ============ WORKER DE AGENDAMENTO (backend híbrido, Cloudflare) ============
+        // A criação de agendamento (envio do formulário) não grava mais
+        // direto no Firestore a partir daqui — passa por este Worker, que
+        // valida tudo com precisão total no servidor (preço exato,
+        // antecedência mínima exata, e a correlação real entre o
+        // agendamento e o(s) slot(s) de disponibilidade que ele ocupa).
+        // Ver cloudflare-worker/README.md para deploy e detalhes.
+        // TROQUE esta URL pela URL real do seu Worker publicado.
+        const AGNAIL_WORKER_URL = 'https://agnails-agendamento-worker.tecminia.workers.dev';
+
         // ============ TEMA ============
         // O tema exibido aqui é o escolhido pela MANICURE (salvo no
         // Firestore, campo "tema" da configuração dela) — não uma
@@ -1356,69 +1366,66 @@
                 return;
             }
 
-            const servicosNomes = servicosSelecionados.map(i => config.servicos[i].nome);
-            const valorTotal = servicosSelecionados.reduce((acc, i) => acc + config.servicos[i].valor, 0);
-            const duracaoTotal = servicosSelecionados.reduce((acc, i) => acc + (config.servicos[i]?.duracao || 0), 0);
+            // [ALTERADO - backend híbrido via Cloudflare Worker] Estas
+            // duas linhas (servicosNomes/valorTotal) continuam existindo
+            // só para a mensagem do WhatsApp e a checagem RÁPIDA abaixo —
+            // não são mais o que decide o preço final gravado. Quem
+            // recalcula o valor de verdade (a partir dos preços reais
+            // cadastrados em meta/configuracoes) é o Worker, no servidor.
+            const servicosNomesLocal = servicosSelecionados.map(i => config.servicos[i].nome);
+            const duracaoTotalLocal = servicosSelecionados.reduce((acc, i) => acc + (config.servicos[i]?.duracao || 0), 0);
 
-            if (!horarioDisponivel(data, horario, duracaoTotal)) {
+            // Checagem local só para feedback imediato (evita mandar uma
+            // requisição que o usuário já sabe, pela própria tela, que vai
+            // falhar). A validação que REALMENTE vale — preço exato,
+            // antecedência mínima exata de 12h, e a garantia de que não
+            // dá pra reservar o mesmo horário duas vezes — acontece toda
+            // no Worker agora, não mais aqui no navegador.
+            if (!horarioDisponivel(data, horario, duracaoTotalLocal)) {
                 mostrarToast('O horário não está mais disponível para a duração selecionada.', 'erro');
                 validarDisponibilidade();
                 return;
             }
 
-            const slots = gerarSlots();
-            const interval = config.intervaloMinutos || 60;
-            const numSlots = Math.ceil(duracaoTotal / interval);
-            const idx = slots.indexOf(horario);
-            const slotsConsumidos = [];
-            for (let i = 0; i < numSlots; i++) slotsConsumidos.push(slots[idx + i]);
-            // ID determinístico por slot ("AAAA-MM-DD_HH:MM"). É esse ID
-            // fixo que impede duas pessoas de reservarem o mesmo horário ao
-            // mesmo tempo: as regras do Firestore tratam uma segunda
-            // tentativa de gravar o mesmo ID como UPDATE (não CREATE), e
-            // não existe permissão pública de update nessa coleção — então
-            // a segunda reserva é automaticamente rejeitada pelo servidor.
-            const slotIds = slotsConsumidos.map(h => `${data}_${h}`);
-
-            const novoId = 'ag_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
-            const dadosAgendamento = {
-                nome,
-                telefone,
-                servicos: servicosNomes,
-                valor: valorTotal,
-                duracaoTotal: duracaoTotal,
-                formaPagamento: pagamento,
-                data,
-                horario,
-                observacoes: obs,
-                tipoAtendimento,
-                endereco: endereco || '',
-                status: 'agendado',
-                criadoEm: new Date().toISOString(),
-                slotsDisponibilidade: slotIds,
-            };
+            // Instante absoluto do agendamento (UTC, sem ambiguidade de
+            // fuso horário) — construído a partir dos componentes locais
+            // de data/hora escolhidos na tela, exatamente como o resto do
+            // app já faz. É este valor, não as strings "data"/"horario",
+            // que o Worker usa para validar a antecedência mínima de 12h
+            // com precisão real.
+            const [anoNum, mesNum, diaNum] = data.split('-').map(Number);
+            const [horaNum, minNum] = horario.split(':').map(Number);
+            const instanteAgendamento = new Date(anoNum, mesNum - 1, diaNum, horaNum, minNum, 0, 0);
+            const instanteISO = instanteAgendamento.toISOString();
 
             const btnSubmitAgendamento = document.getElementById('btnConfirmar');
+            const textoOriginalBotao = btnSubmitAgendamento.innerHTML;
             btnSubmitAgendamento.disabled = true;
+            btnSubmitAgendamento.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando...';
 
-            const batch = Agnails.db.batch();
-            batch.set(manicureRefPublica.collection('agendamentos').doc(novoId), dadosAgendamento);
-            slotIds.forEach(slotId => {
-                // Documento SEM nenhum dado pessoal — só o suficiente para
-                // saber que o horário está ocupado.
-                batch.set(manicureRefPublica.collection('disponibilidade').doc(slotId), {
-                    agendamentoId: novoId,
-                    duracaoTotal: duracaoTotal
-                });
-            });
-            batch.set(manicureRefPublica.collection('clientes').doc(telefone), {
-                nome, telefone,
-                ultimoAgendamento: data,
-                criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-
+            let resultado;
             try {
-                await batch.commit();
+                const resp = await fetch(AGNAIL_WORKER_URL + '/criar-agendamento', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        uid: manicureUid,
+                        nome,
+                        telefone,
+                        servicosIndices: servicosSelecionados,
+                        tipoAtendimento,
+                        endereco: endereco || '',
+                        formaPagamento: pagamento,
+                        observacoes: obs,
+                        data,
+                        horario,
+                        instanteISO
+                    })
+                });
+                resultado = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(resultado.error || 'Não foi possível confirmar o agendamento.');
+                }
             } catch (err) {
                 console.error('Erro ao confirmar agendamento:', err);
                 // A causa mais provável de falha aqui é justamente a trava
@@ -1432,14 +1439,30 @@
                         return { data: dataSlot, horario: horarioSlot, ...d.data() };
                     });
                 } catch (e2) { /* segue mesmo se o refresh falhar */ }
-                mostrarToast('Esse horário acabou de ser reservado por outra pessoa. Escolha outro horário.', 'erro');
+                mostrarToast(err.message || 'Não foi possível confirmar o agendamento. Tente novamente.', 'erro');
                 btnSubmitAgendamento.disabled = false;
+                btnSubmitAgendamento.innerHTML = textoOriginalBotao;
                 validarDisponibilidade();
                 return;
             }
 
             btnSubmitAgendamento.disabled = false;
-            adicionarDisponibilidadeLocal(slotsConsumidos.map(h => ({ data, horario: h, agendamentoId: novoId, duracaoTotal })));
+            btnSubmitAgendamento.innerHTML = textoOriginalBotao;
+
+            // Atualiza o cache local de disponibilidade com o(s) slot(s)
+            // que acabaram de ser ocupados, pro calendário refletir na
+            // hora sem esperar o próximo fetch periódico.
+            const slotsAtualizados = gerarSlots();
+            const intervalAtualizado = config.intervaloMinutos || 60;
+            const numSlotsAtualizados = Math.ceil(duracaoTotalLocal / intervalAtualizado);
+            const idxAtualizado = slotsAtualizados.indexOf(horario);
+            const slotsConsumidosLocal = [];
+            for (let i = 0; i < numSlotsAtualizados && idxAtualizado !== -1; i++) {
+                slotsConsumidosLocal.push(slotsAtualizados[idxAtualizado + i]);
+            }
+            adicionarDisponibilidadeLocal(slotsConsumidosLocal.map(h => ({
+                data, horario: h, agendamentoId: resultado.agendamentoId, duracaoTotal: duracaoTotalLocal
+            })));
 
             document.getElementById('overlayForm').classList.remove('active');
 
@@ -1448,8 +1471,12 @@
                 `${nome}, seu agendamento para ${dataFormatada} às ${horario} foi confirmado!`;
             document.getElementById('overlayConfirmacao').classList.add('active');
 
+            // O Worker devolve os serviços/valor já validados no servidor
+            // (resultado.servicos / resultado.valor) — usamos a resposta
+            // dele na mensagem, não o cálculo local, para a mensagem do
+            // WhatsApp sempre bater com o que foi realmente gravado.
             let msgWhatsApp =
-                `Olá! Gostaria de confirmar meu agendamento:\n\n👤 *Nome:* ${nome}\n📅 *Data:* ${dataFormatada}\n⏰ *Horário:* ${horario}\n💅 *Serviços:* ${servicosNomes.join(', ')}\n💰 *Valor:* R$ ${valorTotal.toFixed(2)}\n💳 *Pagamento:* ${pagamento}\n🏠 *Atendimento:* ${tipoAtendimento}`;
+                `Olá! Gostaria de confirmar meu agendamento:\n\n👤 *Nome:* ${nome}\n📅 *Data:* ${dataFormatada}\n⏰ *Horário:* ${horario}\n💅 *Serviços:* ${(resultado.servicos || servicosNomesLocal).join(', ')}\n💰 *Valor:* R$ ${Number(resultado.valor).toFixed(2)}\n💳 *Pagamento:* ${pagamento}\n🏠 *Atendimento:* ${tipoAtendimento}`;
             if (tipoAtendimento === 'A domicílio') {
                 msgWhatsApp += `\n📍 *Endereço:* ${endereco}`;
             }
