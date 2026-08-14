@@ -125,7 +125,7 @@
         const btn = this;
         const iconeOriginal = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Atualizando...';
+        btn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i>';
         try {
             configSistemaCache = await Agnails.getConfigSistema();
             preencherFormConfig();
@@ -187,7 +187,6 @@
         renderizarListaManicures(itensPaginaAtualManicures);
         renderizarStatsPagina(itensPaginaAtualManicures);
         Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
-        carregarTotalGeralManicures(); // não bloqueia o resto: atualiza o card sozinho quando terminar
     }
 
     async function irParaProximaPaginaManicures() {
@@ -224,31 +223,18 @@
         const pendentes = lista.filter(m => m.statusAcesso.status === 'aguardando_aprovacao').length;
         const expirados = lista.filter(m => m.statusAcesso.status === 'expirado').length;
 
-        // [ALTERADO] "Manicures cadastradas" é o único número realmente
-        // GLOBAL (vem de uma contagem separada — ver
-        // carregarTotalGeralManicures). Os outros 4 números refletem só a
-        // página atual (até 50), porque o status de acesso mora numa
-        // subcoleção por manicure e não dá pra contar globalmente sem ler
-        // cada uma — que é exatamente o custo que a paginação evita.
-        // Rotulados como "nesta página" para não parecerem totais gerais.
+        // [ALTERADO] Removido o card "Manicures cadastradas" (contagem
+        // global) a pedido — os 4 números abaixo refletem só a página
+        // atual (até 50), porque o status de acesso mora numa subcoleção
+        // por manicure e não dá pra contar globalmente sem ler cada uma —
+        // que é exatamente o custo que a paginação evita. Rotulados como
+        // "nesta página" para não parecerem totais gerais.
         document.getElementById('statsGrid').innerHTML = `
-            <div class="stat-card"><div class="num" id="statTotalGeralManicures">…</div><div class="lbl">Manicures cadastradas</div></div>
             <div class="stat-card"><div class="num">${ativos}</div><div class="lbl">Planos ativos (nesta página)</div></div>
             <div class="stat-card"><div class="num">${teste}</div><div class="lbl">Em teste grátis (nesta página)</div></div>
             <div class="stat-card"><div class="num">${pendentes}</div><div class="lbl">Aguardando aprovação (nesta página)</div></div>
             <div class="stat-card"><div class="num">${expirados}</div><div class="lbl">Expirados (nesta página)</div></div>
         `;
-    }
-
-    async function carregarTotalGeralManicures() {
-        const elemento = document.getElementById('statTotalGeralManicures');
-        try {
-            const snap = await Agnails.db.collection('usuarios').where('tipo', '==', 'manicure').count().get();
-            if (elemento) elemento.textContent = snap.data().count;
-        } catch (e) {
-            console.error('Erro ao contar total de manicures:', e);
-            if (elemento) elemento.textContent = '—';
-        }
     }
 
     function renderizarListaManicures(lista) {

@@ -67,7 +67,14 @@
     .btn-sair-header:hover { background:var(--lilas-claro); color:var(--texto); }
 
     /* ---- Tabs (barra inferior fixa, mesmo padrão do painel da manicure) ---- */
-    body { padding-bottom: 78px; }
+    /* [CORRIGIDO] Antes era um valor fixo (78px), mas a barra de abas fica
+       mais alta em telas com área segura inferior (iPhone com indicador
+       de home, etc.), já que ela soma env(safe-area-inset-bottom) à
+       própria altura. Um padding-bottom fixo no body não acompanhava essa
+       diferença, então em alguns aparelhos a barra fixa ficava por cima
+       do fim do conteúdo ao rolar a página. Agora o padding soma a mesma
+       área segura, garantindo espaço suficiente sempre. */
+    body { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
     .tabs-bottom {
         position: fixed; bottom: 0; left: 0; width: 100%;
         background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
