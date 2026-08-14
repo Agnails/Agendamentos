@@ -866,16 +866,82 @@
 
         const manicureRefPublica = Agnails.manicureRef(manicureUid);
 
+        // ============ JANELA DE DATAS DO CALENDÁRIO ============
+        // Movido para cá (antes só existia mais abaixo) porque agora é
+        // usado também para limitar a busca de "disponibilidade" — ver
+        // comentário logo abaixo. O calendário só mostra/permite marcar
+        // horário dentro desses 21 dias (dias fora disso aparecem como
+        // "fora-range" e não são clicáveis), então nunca precisamos de
+        // slots fora dessa janela para decidir o que está livre/ocupado.
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const rangeInicio = new Date(hoje);
+        const rangeFim = new Date(hoje);
+        rangeFim.setDate(rangeFim.getDate() + 21);
+
+        function agnailDataStr(d) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // [CORRIGIDO - CUSTO/ESCALABILIDADE, 2ª rodada] A versão anterior
+        // já limitava a busca aos 21 dias da janela (em vez da coleção
+        // inteira), mas ainda usava um polling de tempos em tempos
+        // (get() repetido) — cada tick pagava de novo o preço de toda a
+        // janela, mesmo quando nada tinha mudado, o que ainda pesava
+        // bastante multiplicado pelo tempo que cada cliente ficava com a
+        // página aberta. Trocado por um LISTENER em tempo real
+        // (onSnapshot) na mesma janela: a leitura inicial custa o mesmo
+        // de um get(), mas as atualizações seguintes só são cobradas
+        // pelos documentos que de fato mudaram (um horário reservado ou
+        // liberado) — não pela janela inteira de novo. Resultado: fica
+        // mais barato E mais em tempo real ao mesmo tempo (a tela reage
+        // na hora a uma reserva de outra pessoa, sem esperar o próximo
+        // tick de 10/20s).
+        let _agnailPrimeiraEntregaDisponibilidade = true;
+        let _agnailResolverDisponibilidadeInicial = null;
+        const agnailDisponibilidadeInicialPromise = new Promise((resolve) => {
+            _agnailResolverDisponibilidadeInicial = resolve;
+        });
+
+        function agnailEscutarDisponibilidadeJanela() {
+            const idInicio = agnailDataStr(rangeInicio);
+            const idFim = agnailDataStr(rangeFim) + '\uf8ff'; // inclui todos os horários do último dia da janela
+            return manicureRefPublica.collection('disponibilidade')
+                .orderBy(firebase.firestore.FieldPath.documentId())
+                .startAt(idInicio)
+                .endAt(idFim)
+                .onSnapshot((snap) => {
+                    window._agnailCacheDisponibilidade = snap.docs.map(d => {
+                        const [dataSlot, horarioSlot] = d.id.split('_');
+                        return { data: dataSlot, horario: horarioSlot, ...d.data() };
+                    });
+                    if (_agnailPrimeiraEntregaDisponibilidade) {
+                        // Primeira entrega: só libera quem está esperando o
+                        // carregamento inicial (mais abaixo) — o calendário
+                        // ainda nem foi renderizado a primeira vez.
+                        _agnailPrimeiraEntregaDisponibilidade = false;
+                        _agnailResolverDisponibilidadeInicial();
+                    } else if (typeof renderizarCalendario === 'function') {
+                        // Atualização de verdade (alguém reservou/cancelou
+                        // um horário nesta janela, aqui ou em outra aba) —
+                        // atualiza a tela na hora.
+                        renderizarCalendario();
+                    }
+                }, (erro) => console.error('Erro ao observar disponibilidade:', erro));
+        }
+        agnailEscutarDisponibilidadeJanela();
+
         // Importante: a página pública NUNCA lê a coleção "agendamentos"
         // (ela contém dados pessoais de clientes — nome, telefone,
         // endereço — e não é de leitura pública). Para saber quais
         // horários estão ocupados, lemos apenas "disponibilidade", uma
         // coleção espelho sem nenhum dado pessoal, com um documento por
-        // slot de horário já ocupado.
-        const [configuracoesRemotas, assinaturaRemota, disponibilidadeSnap] = await Promise.all([
+        // slot de horário já ocupado — e, desde a correção acima, só os
+        // slots dentro da janela de 21 dias do calendário, via listener.
+        const [configuracoesRemotas, assinaturaRemota] = await Promise.all([
             Agnails.getConfiguracoes(manicureUid),
             Agnails.getAssinatura(manicureUid),
-            manicureRefPublica.collection('disponibilidade').get()
+            agnailDisponibilidadeInicialPromise
         ]);
 
         if (!configuracoesRemotas) {
@@ -899,12 +965,8 @@
             return;
         }
 
-        // Cada doc de "disponibilidade" tem ID "AAAA-MM-DD_HH:MM"; extraímos
-        // data/horario diretamente do ID para não depender de campos extras.
-        window._agnailCacheDisponibilidade = disponibilidadeSnap.docs.map(d => {
-            const [dataSlot, horarioSlot] = d.id.split('_');
-            return { data: dataSlot, horario: horarioSlot, ...d.data() };
-        });
+        // window._agnailCacheDisponibilidade já foi preenchido pela
+        // primeira entrega do listener, acima.
 
         // ============ TERMOS DE USO / POLÍTICA DE PRIVACIDADE (cliente) ============
         // Como o cliente não faz login, o aceite fica registrado no
@@ -967,11 +1029,8 @@
         }
 
         const config = getConfig();
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const rangeInicio = new Date(hoje);
-        const rangeFim = new Date(hoje);
-        rangeFim.setDate(rangeFim.getDate() + 21);
+        // "hoje", "rangeInicio" e "rangeFim" já foram declarados mais
+        // acima (precisavam existir antes da busca de disponibilidade).
 
         let mesAtual = hoje.getMonth();
         let anoAtual = hoje.getFullYear();
@@ -1430,15 +1489,12 @@
                 console.error('Erro ao confirmar agendamento:', err);
                 // A causa mais provável de falha aqui é justamente a trava
                 // de horário: alguém reservou o mesmo slot poucos segundos
-                // antes. Atualizamos a disponibilidade e avisamos a pessoa
-                // em vez de deixar a reserva "sumir" silenciosamente.
-                try {
-                    const dispAtualizada = await manicureRefPublica.collection('disponibilidade').get();
-                    window._agnailCacheDisponibilidade = dispAtualizada.docs.map(d => {
-                        const [dataSlot, horarioSlot] = d.id.split('_');
-                        return { data: dataSlot, horario: horarioSlot, ...d.data() };
-                    });
-                } catch (e2) { /* segue mesmo se o refresh falhar */ }
+                // antes. Antes, isso disparava uma releitura manual da
+                // janela de disponibilidade — agora não é mais preciso: o
+                // listener em tempo real (agnailEscutarDisponibilidadeJanela,
+                // lá em cima) já mantém window._agnailCacheDisponibilidade
+                // atualizado sozinho assim que o slot conflitante aparece,
+                // sem custo extra de leitura aqui.
                 mostrarToast(err.message || 'Não foi possível confirmar o agendamento. Tente novamente.', 'erro');
                 btnSubmitAgendamento.disabled = false;
                 btnSubmitAgendamento.innerHTML = textoOriginalBotao;
@@ -1569,20 +1625,17 @@
             mascaraTelefone(this);
         });
 
-        // ============ ATUALIZAÇÃO PERIÓDICA ============
-        setInterval(async () => {
-            const cfgAtual = getConfig();
-            Object.assign(config, cfgAtual);
-            atualizarHeader();
-            try {
-                const dispSnap = await manicureRefPublica.collection('disponibilidade').get();
-                window._agnailCacheDisponibilidade = dispSnap.docs.map(d => {
-                    const [dataSlot, horarioSlot] = d.id.split('_');
-                    return { data: dataSlot, horario: horarioSlot, ...d.data() };
-                });
-            } catch (e) { /* mantém o cache anterior se a rede falhar */ }
-            renderizarCalendario();
-        }, 10000);
+        // [REMOVIDO - CUSTO] Havia aqui um "setInterval" que reconferia a
+        // disponibilidade a cada poucos segundos, mesmo sem nada ter
+        // mudado. Não é mais necessário: agnailEscutarDisponibilidadeJanela()
+        // (lá em cima) usa um listener em tempo real (onSnapshot) na
+        // mesma janela de 21 dias, que já chama renderizarCalendario()
+        // sozinho sempre que um horário é reservado ou liberado — sem
+        // polling, sem custo de leitura repetida, e mais rápido para
+        // refletir mudanças (reage na hora, em vez de esperar o próximo
+        // tick). O recálculo de config/cabeçalho que existia aqui também
+        // não fazia nada de novo: "configuracoesRemotas" só é lido uma
+        // vez, no carregamento inicial da página.
 
         // ============ INICIALIZAR ============
         renderizarCalendario();

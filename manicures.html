@@ -1273,29 +1273,17 @@
             config: configuracoesDoc
         };
 
-        // [NOVO] Resumo do Financeiro em tempo real, mas limitado ao ano
-        // corrente (não à conta inteira desde o início): os cards
-        // Hoje/Este Mês/Este Ano/Média Mensal usam só esses documentos, e
-        // o listener atualiza automaticamente quando um atendimento é
-        // concluído — sem precisar reabrir a aba, e sem baixar todo o
-        // histórico de anos anteriores.
-        let _resumoFinanceiroAnoCache = [];
-        function anoAtualBounds() {
-            const ano = new Date().getFullYear();
-            return { inicio: `${ano}-01-01`, fim: `${ano + 1}-01-01` };
-        }
-        (function observarResumoFinanceiroAnoAtual() {
-            const { inicio, fim } = anoAtualBounds();
-            manicureRef.collection('financeiro')
-                .where('data', '>=', inicio)
-                .where('data', '<', fim)
-                .onSnapshot((snap) => {
-                    _resumoFinanceiroAnoCache = snap.docs.map(d => d.data());
-                    if (document.getElementById('tab-financeiro').classList.contains('ativo')) {
-                        atualizarCardsResumoFinanceiro();
-                    }
-                }, (erro) => console.error('Erro ao observar resumo financeiro:', erro));
-        })();
+        // [REMOVIDO - CUSTO/ESCALABILIDADE] Havia aqui um listener
+        // onSnapshot sempre ligado, lendo TODOS os lançamentos de
+        // "financeiro" do ano corrente — de novo, do zero, toda vez que
+        // o painel carregava (mesmo sem a aba Financeiro ser aberta),
+        // porque o listener é recriado a cada load da página. Como
+        // "financeiro" só cresce (um doc por atendimento concluído), o
+        // custo de cada login ia aumentando mês após mês. Substituído
+        // por um totalizador agregado (meta/resumoFinanceiro, mantido via
+        // FieldValue.increment em concluirAgendamento) lido sob demanda
+        // em carregarResumoFinanceiro(), só quando a aba Financeiro é
+        // aberta — ver essa função, na seção FINANCEIRO mais abaixo.
 
         // Libera a tela (revela o painel principal)
         document.body.classList.remove('agnail-carregando');
@@ -1841,6 +1829,19 @@
                         observacoes: ag.observacoes,
                         dataRegistro: new Date().toISOString()
                     });
+                    // [NOVO - CUSTO/ESCALABILIDADE] Mantém, no mesmo lote
+                    // atômico, um totalizador agregado por ano e por mês
+                    // (meta/resumoFinanceiro) via FieldValue.increment().
+                    // É esse documento pequeno que os cards "Este Ano" e
+                    // "Média Mensal" passam a ler (ver
+                    // carregarResumoFinanceiro, na aba Financeiro), em vez
+                    // de somar a coleção "financeiro" inteira toda vez.
+                    const anoAg = ag.data.slice(0, 4);
+                    const mesAg = ag.data.slice(0, 7);
+                    batch.set(manicureRef.collection('meta').doc('resumoFinanceiro'), {
+                        ['porAno.' + anoAg]: firebase.firestore.FieldValue.increment(totalFinal),
+                        ['porMes.' + mesAg]: firebase.firestore.FieldValue.increment(totalFinal)
+                    }, { merge: true });
                     await batch.commit();
                 } catch (e) {
                     console.error('Erro ao concluir agendamento:', e);
@@ -1871,15 +1872,19 @@
         });
 
         // ============ FINANCEIRO ============
-        // [ALTERADO] A lista de transações agora é paginada de verdade
-        // (20 por vez, direto do Firestore, ordenada por data). Os cards
-        // de resumo (Hoje/Este Mês/Este Ano/Média Mensal) não usam mais o
-        // histórico inteiro — usam a busca leve limitada ao ano corrente
-        // (_resumoFinanceiroAnoCache, mantida em tempo real lá em cima,
-        // na seção CACHE LOCAL). Por causa disso, "Média Mensal" passou a
-        // significar "média deste ano até o mês atual" (antes era "média
-        // de todos os meses desde sempre") — fica mais barato de calcular
-        // e não cresce sem limite conforme o histórico acumula.
+        // [ALTERADO] A lista de transações continua paginada de verdade
+        // (20 por vez, direto do Firestore, ordenada por data).
+        //
+        // [CORRIGIDO - CUSTO/ESCALABILIDADE] Os cards de resumo
+        // (Hoje/Este Mês/Este Ano/Média Mensal) não usam mais nenhuma
+        // leitura de coleção inteira nem listener em tempo real — "Este
+        // Ano" e "Este Mês" vêm de um único documento agregado
+        // (meta/resumoFinanceiro), incrementado atomicamente a cada
+        // atendimento concluído (ver concluirAgendamento), e "Hoje" vem
+        // de uma busca filtrada só pelo dia (poucos documentos). O custo
+        // de abrir esta aba fica praticamente constante, não cresce mais
+        // com o tamanho do histórico da conta. "Média Mensal" continua
+        // significando "média deste ano até o mês atual".
         let paginadorFinanceiro = null;
 
         function construirQueryFinanceiro(filtroInicio, filtroFim) {
@@ -1889,23 +1894,38 @@
             return q.orderBy('data', 'desc');
         }
 
-        function atualizarCardsResumoFinanceiro() {
+        async function carregarResumoFinanceiro() {
             const agora = new Date();
+            const anoAtual = String(agora.getFullYear());
             const hojeStr = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
             const mesAtualStr = hojeStr.slice(0, 7);
             const numeroMesAtual = agora.getMonth() + 1;
 
-            const dadosAno = _resumoFinanceiroAnoCache;
-            const totalHoje = dadosAno.filter(f => f.data === hojeStr).reduce((s, f) => s + f.valor, 0);
-            const totalMes = dadosAno.filter(f => f.data.startsWith(mesAtualStr)).reduce((s, f) => s + f.valor, 0);
-            const totalAno = dadosAno.reduce((s, f) => s + f.valor, 0);
+            let totalAno = 0, totalMes = 0, totalHoje = 0;
+            try {
+                // As duas buscas abaixo são independentes e leves: o
+                // documento agregado é sempre 1 leitura (não importa
+                // quantos atendimentos já foram concluídos na conta), e a
+                // busca de "hoje" é filtrada só pelo dia corrente — bem
+                // diferente de reler o ano inteiro.
+                const [resumoSnap, hojeSnap] = await Promise.all([
+                    manicureRef.collection('meta').doc('resumoFinanceiro').get(),
+                    manicureRef.collection('financeiro').where('data', '==', hojeStr).get()
+                ]);
+                const resumo = resumoSnap.exists ? resumoSnap.data() : {};
+                totalAno = (resumo.porAno && resumo.porAno[anoAtual]) || 0;
+                totalMes = (resumo.porMes && resumo.porMes[mesAtualStr]) || 0;
+                totalHoje = hojeSnap.docs.reduce((s, d) => s + (d.data().valor || 0), 0);
+            } catch (e) {
+                console.error('Erro ao carregar resumo financeiro:', e);
+            }
             const mediaMensal = totalAno / numeroMesAtual;
 
             document.getElementById('resumoFinanceiro').innerHTML = `
               <div class="resumo-card"><div class="valor">R$ ${totalHoje.toFixed(2)}</div><div class="label">Hoje</div></div>
               <div class="resumo-card"><div class="valor">R$ ${totalMes.toFixed(2)}</div><div class="label">Este Mês</div></div>
               <div class="resumo-card"><div class="valor">R$ ${totalAno.toFixed(2)}</div><div class="label">Este Ano</div></div>
-              <div class="resumo-card"><div class="valor">R$ ${mediaMensal.toFixed(2)}</div><div class="label">Média Mensal (${hojeStr.slice(0,4)})</div></div>
+              <div class="resumo-card"><div class="valor">R$ ${mediaMensal.toFixed(2)}</div><div class="label">Média Mensal (${anoAtual})</div></div>
             `;
         }
 
@@ -1929,7 +1949,7 @@
         }
 
         async function carregarFinanceiro(filtroInicio = null, filtroFim = null) {
-            atualizarCardsResumoFinanceiro();
+            carregarResumoFinanceiro(); // não bloqueia a lista paginada abaixo
 
             const lista = document.getElementById('listaFinanceiro');
             paginadorFinanceiro = Agnails.criarPaginador(construirQueryFinanceiro(filtroInicio, filtroFim), 20);
