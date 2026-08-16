@@ -11,6 +11,17 @@
    publicação em produção. Campos entre colchetes [ ] foram preenchidos
    com os dados fornecidos pela Tecminia.
    ========================================================================== */
+// [NOVO] Versão dos Termos/Política, usada para invalidar aceites
+// antigos automaticamente. Sempre que o CONTEÚDO abaixo mudar de forma
+// relevante, incremente este valor (e a linha "Última atualização /
+// Versão X.X" dentro do HTML, para manter as duas informações
+// consistentes) — clientes e manicures que já aceitaram uma versão
+// anterior voltam a ver o modal de aceite na próxima visita, em vez de
+// ficar com um aceite antigo válido para sempre. Ver uso em
+// agendamentos.html (cliente, via localStorage) e manicures.html
+// (manicure, via meta/perfilPrivado.termosVersaoAceita).
+window.AGNAIL_TERMOS_VERSAO = '2.1';
+
 window.AGNAIL_TERMOS_HTML = `
     <p style="font-size:0.78rem; color:var(--texto-claro);">Última atualização: 05 de agosto de 2026. Versão 2.1.</p>
 
