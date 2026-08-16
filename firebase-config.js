@@ -99,30 +99,6 @@ const AGNAIL_MAX_PDF_KB = 800;
 const AGNAIL_DIAS_RETENCAO_EXCLUSAO = 90;
 
 /* ------------------------------------------------------------------------
-   [NOVO] Token de App Check para chamadas fetch() diretas (fora do SDK)
-   O firebase.appCheck().activate(...) logo acima protege chamadas feitas
-   pelo SDK do Firestore, mas NÃO cobre um fetch() manual para um backend
-   externo — como o Worker de agendamento (agendamentos.html chama
-   AGNAIL_WORKER_URL + '/criar-agendamento' diretamente, sem passar pelo
-   SDK). Essa função busca o token atual para ser enviado manualmente no
-   header "X-Firebase-AppCheck" dessas chamadas; o Worker então confere
-   esse token sozinho (ver validarAppCheck() em worker.js). Retorna ''
-   silenciosamente se o App Check não estiver disponível/configurado
-   nesta página, para nunca travar o agendamento por causa desta camada
-   extra.
-   ------------------------------------------------------------------------ */
-async function agnailObterAppCheckToken() {
-  try {
-    if (typeof firebase.appCheck !== 'function') return '';
-    const resultado = await firebase.appCheck().getToken();
-    return (resultado && resultado.token) || '';
-  } catch (e) {
-    console.warn('Não foi possível obter o token de App Check:', e);
-    return '';
-  }
-}
-
-/* ------------------------------------------------------------------------
    [NOVO] Bloqueio de seleção/cópia de texto
    Aplica-se a todas as páginas que carregam este arquivo (login, cobrança,
    painel da manicure, painel administrativo, agendamento público e a
@@ -463,13 +439,8 @@ function agnailManicureRef(uid) {
 async function agnailCriarEstruturaInicial(user) {
   const configSistema = await agnailGetConfigSistema();
   const agora = firebase.firestore.Timestamp.now();
-
-  // [NOVO] Impede burlar o teste grátis excluindo a conta e logando de
-  // novo com a mesma conta Google: consulta um registro PERMANENTE
-  // (nunca apagado, nem na exclusão definitiva) de que este UID já
-  // recebeu um trial alguma vez — ver agnailJaUsouTesteGratis() e o
-  // registro criado em agnailExcluirContaPermanentemente(), abaixo.
-  const jaUsouTeste = await agnailJaUsouTesteGratis(user.uid);
+  const fimTeste = new Date();
+  fimTeste.setDate(fimTeste.getDate() + (configSistema.diasTeste || AGNAIL_DIAS_TESTE_PADRAO));
 
   // meta/perfil: dados PÚBLICOS (lidos sem login pela página de
   // agendamento do cliente). Nunca guardar e-mail/telefone aqui.
@@ -492,41 +463,17 @@ async function agnailCriarEstruturaInicial(user) {
     termosAceitosEm: null
   };
 
-  let assinatura;
-  if (jaUsouTeste) {
-    // [CORRIGIDO - CRÍTICO] Esta conta Google já usou um período de
-    // teste grátis antes (mesmo que numa conta já excluída
-    // definitivamente). Nasce direto como "expirado" — sem acesso
-    // liberado — em vez de ganhar um novo trial. fimTeste == vencimento
-    // == agora, só para respeitar o schema exigido pelas Regras de
-    // Segurança (que também precisaram ser atualizadas para aceitar este
-    // segundo formato de criação — ver REGRAS_DE_SEGURANCA.txt, v12).
-    assinatura = {
-      status: 'expirado',
-      plano: 'padrao',
-      inicioTeste: agora,
-      fimTeste: agora,
-      vencimento: agora,
-      ultimoPagamento: null,
-      acessoLiberado: false,
-      dataSolicitacaoExclusao: null,
-      dataExclusaoPermitida: null
-    };
-  } else {
-    const fimTeste = new Date();
-    fimTeste.setDate(fimTeste.getDate() + (configSistema.diasTeste || AGNAIL_DIAS_TESTE_PADRAO));
-    assinatura = {
-      status: 'teste_gratuito',
-      plano: 'padrao',
-      inicioTeste: agora,
-      fimTeste: firebase.firestore.Timestamp.fromDate(fimTeste),
-      vencimento: firebase.firestore.Timestamp.fromDate(fimTeste),
-      ultimoPagamento: null,
-      acessoLiberado: true,
-      dataSolicitacaoExclusao: null,
-      dataExclusaoPermitida: null
-    };
-  }
+  const assinatura = {
+    status: 'teste_gratuito',
+    plano: 'padrao',
+    inicioTeste: agora,
+    fimTeste: firebase.firestore.Timestamp.fromDate(fimTeste),
+    vencimento: firebase.firestore.Timestamp.fromDate(fimTeste),
+    ultimoPagamento: null,
+    acessoLiberado: true,
+    dataSolicitacaoExclusao: null,
+    dataExclusaoPermitida: null
+  };
 
   const configuracoes = {
     nomeEmpresa: '',
@@ -635,20 +582,7 @@ function agnailCalcularStatusAcesso(assinatura) {
   }
 
   if (assinatura.status === 'aguardando_aprovacao') {
-    // [CORRIGIDO - CRÍTICO] Antes, enviar um comprovante derrubava o
-    // acesso IMEDIATAMENTE, mesmo que o teste grátis ou a mensalidade
-    // anterior ainda estivessem dentro do prazo — porque este branch
-    // sempre retornava acessoLiberado:false, incondicionalmente. Uma
-    // manicure que mandasse o comprovante um pouco antes do vencimento
-    // (o comportamento correto, adiantar o pagamento) ficava bloqueada
-    // na hora, enquanto o admin analisa. Agora o acesso continua
-    // liberado enquanto o "vencimento" gravado (do teste grátis ou da
-    // última mensalidade aprovada) ainda não passou — só quando esse
-    // prazo realmente vence é que o acesso é bloqueado de fato, com ou
-    // sem pagamento em análise.
-    const vencimento = assinatura.vencimento ? assinatura.vencimento.toDate() : null;
-    const aindaValido = !!(vencimento && agora <= vencimento);
-    return { status: 'aguardando_aprovacao', acessoLiberado: aindaValido, diasRestantesTeste: 0 };
+    return { status: 'aguardando_aprovacao', acessoLiberado: false, diasRestantesTeste: 0 };
   }
 
   if (assinatura.status === 'ativo') {
@@ -745,47 +679,10 @@ async function agnailSolicitarExclusaoConta(uid, emailUsuario) {
 }
 
 /**
- * [NOVO] Verifica se este UID já usou o período de teste grátis alguma
- * vez — inclusive numa conta já excluída definitivamente antes. Consulta
- * um registro permanente (administracao/testesUtilizados/uids/{uid}) que
- * NUNCA é apagado, nem pela própria exclusão definitiva de conta (ver
- * agnailExcluirContaPermanentemente, logo abaixo, que é quem grava esse
- * registro). Usado por agnailCriarEstruturaInicial() para decidir se a
- * conta nasce com um trial novo ou já "expirado".
- */
-async function agnailJaUsouTesteGratis(uid) {
-  const snap = await db.collection('administracao').doc('testesUtilizados').collection('uids').doc(uid).get();
-  return snap.exists;
-}
-
-/**
  * Remove definitivamente todos os dados de uma manicure. Usado apenas pelo
  * Painel Administrativo (adm.html), após os 90 dias de retenção.
  */
 async function agnailExcluirContaPermanentemente(uid) {
-  // [NOVO - CRÍTICO] Antes de apagar qualquer coisa, registra num
-  // documento PERMANENTE (nunca removido por este mesmo processo, nem
-  // por nenhum outro fluxo do app) que este UID já usufruiu do período
-  // de teste grátis. Sem isso, era possível excluir a conta e, como o
-  // login usa a mesma conta Google, logar de novo mais tarde com o mesmo
-  // uid para ganhar um novo período de teste inteiro — o "usuarios/{uid}"
-  // antigo já não existe mais nesse ponto, então agnailProcessarPosLogin
-  // trata como primeiro acesso e chama agnailCriarEstruturaInicial() de
-  // novo. Este registro é o que agnailJaUsouTesteGratis() consulta para
-  // impedir isso (ver acima).
-  try {
-    const usuarioAntesDeExcluir = await agnailGetUsuario(uid);
-    await db.collection('administracao').doc('testesUtilizados').collection('uids').doc(uid).set({
-      uid,
-      email: (usuarioAntesDeExcluir && usuarioAntesDeExcluir.email) || null,
-      excluidoEm: firebase.firestore.Timestamp.now()
-    });
-  } catch (e) {
-    // Não deixa uma falha aqui impedir a exclusão em si — mas registra o
-    // erro, já que perder este registro reabre a brecha de trial duplo.
-    console.error('Erro ao registrar uso de teste grátis antes da exclusão definitiva:', e);
-  }
-
   // [CORRIGIDO] Contas com mais de 500 documentos numa mesma subcoleção
   // (ex.: agendamentos ou financeiro acumulados ao longo dos anos)
   // faziam essa exclusão falhar: o Firestore rejeita lotes com mais de
@@ -1011,7 +908,6 @@ window.Agnails = {
   DIAS_RETENCAO_EXCLUSAO: AGNAIL_DIAS_RETENCAO_EXCLUSAO,
   loginGoogle: agnailLoginGoogle,
   logout: agnailLogout,
-  obterAppCheckToken: agnailObterAppCheckToken,
   onAuthChange: agnailOnAuthChange,
   mascararCelular: agnailMascararCelular,
   aplicarMascaraCelular: agnailAplicarMascaraCelular,
@@ -1024,7 +920,6 @@ window.Agnails = {
   setConfigSistema: agnailSetConfigSistema,
   manicureRef: agnailManicureRef,
   criarEstruturaInicial: agnailCriarEstruturaInicial,
-  jaUsouTesteGratis: agnailJaUsouTesteGratis,
   getUsuario: agnailGetUsuario,
   getAssinatura: agnailGetAssinatura,
   getPerfil: agnailGetPerfil,

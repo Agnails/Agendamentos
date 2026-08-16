@@ -1234,18 +1234,7 @@
 
         function aguardarAceiteTermos(perfil) {
             return new Promise((resolve) => {
-                // [ALTERADO] Também exige que a VERSÃO aceita bata com a
-                // versão atual dos Termos (window.AGNAIL_TERMOS_VERSAO,
-                // definida em termos-conteudo.js) — antes, um
-                // "termosAceitos: true" gravado uma única vez valia para
-                // sempre, mesmo depois do conteúdo dos Termos mudar.
-                // Contas que já tinham aceitado antes desta correção (sem
-                // "termosVersaoAceita" gravado) caem no "undefined !==
-                // '2.1'" e corretamente veem o modal de novo uma vez.
-                if (perfil && perfil.termosAceitos && perfil.termosVersaoAceita === window.AGNAIL_TERMOS_VERSAO) {
-                    resolve();
-                    return;
-                }
+                if (perfil && perfil.termosAceitos) { resolve(); return; }
                 document.getElementById('conteudoTermos').innerHTML = window.AGNAIL_TERMOS_HTML || '';
                 const overlay = document.getElementById('overlayTermos');
                 const check = document.getElementById('checkAceiteTermos');
@@ -1259,8 +1248,7 @@
                     btn.textContent = 'Salvando...';
                     await manicureRef.collection('meta').doc('perfilPrivado').set({
                         termosAceitos: true,
-                        termosAceitosEm: firebase.firestore.Timestamp.now(),
-                        termosVersaoAceita: window.AGNAIL_TERMOS_VERSAO
+                        termosAceitosEm: firebase.firestore.Timestamp.now()
                     }, { merge: true });
                     overlay.classList.remove('active');
                     resolve();

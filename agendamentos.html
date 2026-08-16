@@ -972,33 +972,8 @@
         // Como o cliente não faz login, o aceite fica registrado no
         // navegador (localStorage). Documentos continuam disponíveis para
         // consulta a qualquer momento (link no rodapé da página).
-        //
-        // [ALTERADO] O aceite agora é VERSIONADO: localStorage guarda um
-        // objeto { versao, aceitoEm } em vez de um simples "true". Assim,
-        // se os Termos forem atualizados no futuro (nova
-        // window.AGNAIL_TERMOS_VERSAO em termos-conteudo.js), o cliente
-        // volta a ver o modal e precisa aceitar a versão nova, em vez de
-        // ficar com um aceite antigo valendo para sempre, mesmo depois do
-        // conteúdo mudar.
-        const AGNAIL_CHAVE_ACEITE_TERMOS_CLIENTE = 'agnail_cliente_termos_aceitos';
-        function agnailLerAceiteTermosCliente() {
-            try {
-                const bruto = localStorage.getItem(AGNAIL_CHAVE_ACEITE_TERMOS_CLIENTE);
-                if (!bruto) return null;
-                const parsed = JSON.parse(bruto);
-                // Compatibilidade com o formato antigo (string "true"
-                // simples, sem versão, gravado antes desta correção): o
-                // JSON.parse de "true" retorna o booleano true, não um
-                // objeto — tratamos como "nenhuma versão aceita ainda",
-                // para pedir o aceite de novo com o versionamento correto.
-                return (parsed && typeof parsed === 'object') ? parsed : null;
-            } catch (e) {
-                return null;
-            }
-        }
         await new Promise((resolve) => {
-            const aceiteSalvo = agnailLerAceiteTermosCliente();
-            if (aceiteSalvo && aceiteSalvo.versao === window.AGNAIL_TERMOS_VERSAO) { resolve(); return; }
+            if (localStorage.getItem('agnail_cliente_termos_aceitos') === 'true') { resolve(); return; }
             document.getElementById('conteudoTermosCliente').innerHTML = window.AGNAIL_TERMOS_HTML || '';
             const overlay = document.getElementById('overlayTermosCliente');
             const check = document.getElementById('checkAceiteTermosCliente');
@@ -1010,10 +985,7 @@
             btn.disabled = true;
             check.onchange = () => { btn.disabled = !check.checked; };
             btn.onclick = () => {
-                localStorage.setItem(AGNAIL_CHAVE_ACEITE_TERMOS_CLIENTE, JSON.stringify({
-                    versao: window.AGNAIL_TERMOS_VERSAO,
-                    aceitoEm: new Date().toISOString()
-                }));
+                localStorage.setItem('agnail_cliente_termos_aceitos', 'true');
                 overlay.classList.remove('active');
                 resolve();
             };
@@ -1492,20 +1464,9 @@
 
             let resultado;
             try {
-                // [NOVO] O App Check ativado em firebase-config.js protege
-                // chamadas feitas pelo SDK do Firestore, mas não cobre
-                // este fetch() manual ao Worker — o Worker confere este
-                // token sozinho (ver validarAppCheck em worker.js).
-                // Retorna '' se o App Check não estiver disponível nesta
-                // página; o Worker ainda aceita a chamada em modo
-                // monitoramento (ver APP_CHECK_ENFORCE no Worker).
-                const appCheckTokenAtual = await Agnails.obterAppCheckToken();
                 const resp = await fetch(AGNAIL_WORKER_URL + '/criar-agendamento', {
                     method: 'POST',
-                    headers: Object.assign(
-                        { 'Content-Type': 'application/json' },
-                        appCheckTokenAtual ? { 'X-Firebase-AppCheck': appCheckTokenAtual } : {}
-                    ),
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         uid: manicureUid,
                         nome,
