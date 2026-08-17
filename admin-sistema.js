@@ -55,6 +55,46 @@
         return `<span class="badge ${classe}">${texto}</span>`;
     }
 
+    /* ---------------- LOG DE AUDITORIA (ações administrativas) ----------------
+       [NOVO - correção A4] Registra toda ação administrativa sensível
+       (bloqueio/liberação de acesso, aprovação/rejeição de pagamento,
+       reativação e exclusão definitiva de conta etc.) numa coleção
+       própria — administracao/logsAdmin/entradas —, separada do log de
+       eventos automáticos disparados pelo próprio usuário
+       (administracao/logs, que já existia). Cada entrada guarda quem fez
+       (e-mail do admin logado), o quê (ação) e, quando fizer sentido, um
+       resumo dos valores antes/depois.
+
+       Não foi preciso alterar REGRAS_DE_SEGURANCA.txt para isto: o
+       caminho administracao/logsAdmin/** já cai sob a regra "catch-all"
+       match /administracao/{doc=**} { allow read, write: if ehAdmin(); },
+       que cobre qualquer subcaminho dentro de administracao/ sem uma
+       regra mais específica — o mesmo padrão que já protege esta e
+       outras coleções administrativas.
+
+       Uma falha ao gravar o log NUNCA desfaz nem bloqueia a ação
+       principal (que já foi concluída antes desta chamada) — fica só
+       registrada no console, para não passar despercebida sem impedir o
+       uso normal do painel.
+
+       Para consultar os logs: Firebase Console > Firestore Database >
+       administracao > logsAdmin > entradas (o mesmo lugar onde o
+       primeiro administrador do sistema já precisa ser configurado
+       manualmente — ver comentário no topo deste arquivo). */
+    async function registrarLogAdmin(acao, uidAlvo, detalhes) {
+        try {
+            await Agnails.db.collection('administracao').doc('logsAdmin').collection('entradas').add({
+                admin: adminAtual ? adminAtual.email : null,
+                acao,
+                uidAlvo: uidAlvo || null,
+                detalhes: detalhes || {},
+                dataHora: firebase.firestore.Timestamp.now()
+            });
+        } catch (e) {
+            console.error('Erro ao registrar log administrativo (a ação em si já foi aplicada normalmente):', e);
+        }
+    }
+
     /* ---------------- LOGIN / VERIFICAÇÃO DE ADMIN ----------------
        Por segurança, não é possível se autopromover a administrador pelo
        navegador (isso seria uma falha grave de segurança). O campo
@@ -311,11 +351,20 @@
         const valor = document.getElementById('inputNovoVencimento').value;
         if (!valor) { mostrarToast('Escolha uma data.', 'erro'); return; }
         const data = new Date(valor + 'T23:59:59');
+        // [NOVO - A4] Vencimento anterior, só para o log de auditoria —
+        // não influencia a escrita em si. Vem da própria página já
+        // carregada (é sempre de lá que este botão é alcançado, via
+        // abrirDetalhe).
+        const manicureAlvo = itensPaginaAtualManicures.find(x => x.uid === uid);
+        const vencimentoAnterior = manicureAlvo?.assinatura?.vencimento
+            ? manicureAlvo.assinatura.vencimento.toDate().toISOString()
+            : null;
         await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
             vencimento: firebase.firestore.Timestamp.fromDate(data),
             status: 'ativo',
             acessoLiberado: true
         }, { merge: true });
+        registrarLogAdmin('vencimento_alterado_manual', uid, { vencimentoAnterior, vencimentoNovo: data.toISOString() });
         mostrarToast('Vencimento atualizado!', 'sucesso');
         document.getElementById('overlayDetalheManicure').classList.remove('show');
         recarregarPaginaAtualManicures();
@@ -325,6 +374,7 @@
         await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
             acessoLiberado: false, status: 'expirado'
         }, { merge: true });
+        registrarLogAdmin('acesso_bloqueado', uid, {}); // [NOVO - A4]
         mostrarToast('Acesso bloqueado.', 'sucesso');
         document.getElementById('overlayDetalheManicure').classList.remove('show');
         recarregarPaginaAtualManicures();
@@ -347,6 +397,7 @@
             acessoLiberado: true, status: 'ativo',
             vencimento: firebase.firestore.Timestamp.fromDate(novoVencimento)
         }, { merge: true });
+        registrarLogAdmin('acesso_liberado_manual', uid, { novoVencimento: novoVencimento.toISOString() }); // [NOVO - A4]
         mostrarToast('Acesso liberado (vencimento em 30 dias).', 'sucesso');
         document.getElementById('overlayDetalheManicure').classList.remove('show');
         recarregarPaginaAtualManicures();
@@ -487,6 +538,12 @@
 
         await Agnails.db.collection('administracao').doc('pagamentosPendentes').collection('itens').doc(pagamentoId).delete();
 
+        registrarLogAdmin('pagamento_aprovado', uid, { // [NOVO - A4]
+            pagamentoId,
+            observacoes: obs,
+            vencimentoAnterior: vencimentoAtual ? vencimentoAtual.toISOString() : null,
+            vencimentoNovo: novoVencimento.toISOString()
+        });
         mostrarToast('Pagamento aprovado!', 'sucesso');
         carregarPagamentosPendentes();
         recarregarPaginaAtualManicures();
@@ -502,6 +559,7 @@
         }, { merge: true });
         await Agnails.db.collection('administracao').doc('pagamentosPendentes').collection('itens').doc(pagamentoId).delete();
 
+        registrarLogAdmin('pagamento_rejeitado', uid, { pagamentoId, observacoes: obs }); // [NOVO - A4]
         mostrarToast('Pagamento rejeitado.', 'sucesso');
         carregarPagamentosPendentes();
         recarregarPaginaAtualManicures();
@@ -574,6 +632,7 @@
             dataSolicitacaoExclusao: null, dataExclusaoPermitida: null
         }, { merge: true });
         await Agnails.db.collection('administracao').doc('contasPendentesExclusao').collection('contas').doc(uid).delete();
+        registrarLogAdmin('conta_reativada_pelo_admin', uid, {}); // [NOVO - A4]
         mostrarToast('Conta reativada!', 'sucesso');
         carregarContasExclusao();
         recarregarPaginaAtualManicures();
@@ -581,6 +640,21 @@
 
     window.AgnailsAdmin.excluirPermanente = async function (uid) {
         if (!confirm('Esta ação é irreversível e removerá todos os dados desta manicure. Continuar?')) return;
+        // [NOVO - A4] Guarda um resumo de identificação ANTES de
+        // excluir — depois da exclusão não sobra nada para consultar, e
+        // o log de auditoria passa a ser o único registro de que esta
+        // conta existiu. Uma leitura extra e pontual, só nesta ação (já
+        // rara e irreversível).
+        let resumoContaExcluida = { uid };
+        try {
+            const usuarioSnap = await Agnails.db.collection('usuarios').doc(uid).get();
+            if (usuarioSnap.exists) {
+                resumoContaExcluida.email = usuarioSnap.data().email || null;
+                resumoContaExcluida.nome = usuarioSnap.data().nome || null;
+            }
+        } catch (e) {
+            console.error('Erro ao buscar dados da conta antes da exclusão (log ficará incompleto):', e);
+        }
         try {
             await Agnails.excluirContaPermanentemente(uid);
         } catch (e) {
@@ -588,6 +662,7 @@
             mostrarToast('Erro ao excluir a conta. Tente novamente.', 'erro');
             return;
         }
+        registrarLogAdmin('conta_excluida_permanentemente', uid, resumoContaExcluida); // [NOVO - A4]
         mostrarToast('Conta excluída permanentemente.', 'sucesso');
         carregarContasExclusao();
         recarregarPaginaAtualManicures();

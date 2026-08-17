@@ -28,7 +28,7 @@ if (!firebase.apps.length) {
    "disponibilidade" e "clientes" (por desenho — o cliente final não faz
    login). As regras do Firestore validam o FORMATO dos dados (e, desde a
    v8, também uma janela plausível de datas em "disponibilidade" — ver
-   REGRAS_DE_SEGURANÇA.txt), mas sozinhas não têm como distinguir um
+   REGRAS_DE_SEGURANCA.txt), mas sozinhas não têm como distinguir um
    navegador real de um script/bot automatizado. Por isso a mitigação de
    bot/spam de fato depende do Firebase App Check.
 
@@ -93,7 +93,7 @@ const AGNAIL_ALVO_IMG_KB = 750;     // alvo pós-compactação
 // navegador — então, ao contrário de agnailProcessarImagem, um PDF acima
 // do limite é simplesmente rejeitado com uma mensagem clara, em vez de
 // compactado. O valor fica abaixo dos 950.000 bytes exigidos pela regra
-// em pagamentos/{id}.comprovante (ver REGRAS_DE_SEGURANÇA.txt), com folga
+// em pagamentos/{id}.comprovante (ver REGRAS_DE_SEGURANCA.txt), com folga
 // de segurança para o overhead de Base64 e o prefixo "data:...;base64,".
 const AGNAIL_MAX_PDF_KB = 800;
 const AGNAIL_DIAS_RETENCAO_EXCLUSAO = 90;
@@ -107,7 +107,7 @@ const AGNAIL_DIAS_RETENCAO_EXCLUSAO = 90;
    do navegador, "Exibir código-fonte" ou uma chamada direta à API do
    Firestore continua acessando os dados normalmente. A segurança real do
    app continua sendo garantida pelas regras do Firestore (ver
-   REGRAS_DE_SEGURANÇA.txt), que não dependem do que acontece na tela.
+   REGRAS_DE_SEGURANCA.txt), que não dependem do que acontece na tela.
    Campos de formulário (input, textarea, select, elementos com
    contenteditable) ficam de fora da restrição, já que precisam de seleção
    nativa para o usuário poder editar o próprio texto digitado, e links
@@ -213,7 +213,7 @@ async function agnailProcessarImagem(file) {
      Base64. Isso fazia arquivos "dentro do limite" (ex.: 750KB) passarem
      direto SEM compactação, gerando uma string maior que os 950.000
      bytes exigidos pela regra do Firestore em pagamentos/{id}.comprovante
-     (ver REGRAS_DE_SEGURANÇA.txt). O resultado era um permission-denied
+     (ver REGRAS_DE_SEGURANCA.txt). O resultado era um permission-denied
      silencioso, específico de fotos nessa faixa de tamanho — intermitente
      e difícil de reproduzir, porque dependia do arquivo escolhido.
      Agora a comparação usa o tamanho REAL em Base64 (a mesma unidade que
@@ -495,7 +495,13 @@ async function agnailCriarEstruturaInicial(user) {
   batch.set(userRef, {
     nome: user.displayName || '',
     email: user.email || '',
-    foto: '',
+    // [CORRIGIDO - B3] Antes ficava sempre '' — nunca era populado a
+    // partir da conta Google, então o painel administrativo (adm.html)
+    // nunca tinha uma foto real para mostrar nas listas de manicures
+    // (sempre caía no ícone genérico). user.photoURL já vem pronto do
+    // mesmo objeto de usuário do Firebase Auth usado para nome/e-mail
+    // acima, sem nenhuma chamada extra.
+    foto: user.photoURL || '',
     tipo: 'manicure',
     statusConta: 'ativa',
     criadoEm: agora,
@@ -624,7 +630,12 @@ async function agnailProcessarPosLogin(user) {
   await db.collection('usuarios').doc(user.uid).set({
     ultimoLogin: firebase.firestore.Timestamp.now(),
     nome: user.displayName || usuarioExistente.nome,
-    foto: usuarioExistente.foto || ''
+    // [CORRIGIDO - B3] Atualiza a partir da conta Google a cada login
+    // (mesmo padrão já usado para "nome" logo acima, inclusive cobrindo
+    // o caso de a pessoa ter trocado a própria foto no Google depois do
+    // cadastro), com fallback pro valor já salvo e, por fim, string
+    // vazia.
+    foto: user.photoURL || usuarioExistente.foto || ''
   }, { merge: true });
 
   // Se havia solicitado exclusão, restaura automaticamente
