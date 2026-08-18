@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Agnails - termos-conteudo.js
+   Agnayls - termos-conteudo.js
    Conteúdo compartilhado da Política de Privacidade e dos Termos de Uso,
    usado no painel da manicure (manicures.html) e no painel do cliente
    (agendamentos.html).
@@ -18,7 +18,7 @@ window.AGNAIL_TERMOS_HTML = `
 
     <p><strong>1. Aceitação dos Termos</strong></p>
     <p>Estes Termos de Uso regulam o acesso e a utilização da
-    plataforma Agnails, oferecida pela startup
+    plataforma Agnayls, oferecida pela startup
     Tecminia (em constituição), com sede na
     BR-319, Km 110, Careiro/AM. Ao criar uma conta, acessar ou utilizar a
     plataforma de qualquer forma, você ("usuário") declara que leu,
@@ -27,12 +27,12 @@ window.AGNAIL_TERMOS_HTML = `
     serviço.</p>
 
     <p><strong>2. Descrição do Serviço</strong></p>
-    <p>O Agnails é uma ferramenta de agendamento e gestão voltada a
+    <p>O Agnayls é uma ferramenta de agendamento e gestão voltada a
     profissionais de manicure e estabelecimentos similares ("profissional"
     ou "manicure"), permitindo o gerenciamento de clientes, horários,
     serviços oferecidos, controle financeiro e o agendamento de horários
     por clientes finais ("cliente") através de um link público
-    disponibilizado pela profissional. O Agnails atua exclusivamente como
+    disponibilizado pela profissional. O Agnayls atua exclusivamente como
     fornecedor de tecnologia e não é parte na relação comercial entre a
     profissional e seus clientes, não se responsabilizando pela qualidade,
     execução, cancelamento ou qualquer aspecto dos serviços de manicure em
@@ -44,14 +44,14 @@ window.AGNAIL_TERMOS_HTML = `
     acesso com terceiros. A profissional é integralmente responsável pela
     veracidade, exatidão e atualização dos dados fornecidos no cadastro
     (nome, dados do negócio, telefone, imagens) e por todas as atividades
-    realizadas em sua conta. O Agnails poderá recusar, suspender ou encerrar
+    realizadas em sua conta. O Agnayls poderá recusar, suspender ou encerrar
     cadastros que contenham informações falsas, incompletas ou que violem
     estes Termos.</p>
 
     <p><strong>4. Período de Teste Gratuito e Assinatura</strong></p>
     <p>No primeiro cadastro, a profissional recebe um período de teste
     gratuito, cuja duração é informada no momento da criação da conta e
-    pode ser alterada pela administração do Agnails a qualquer momento para
+    pode ser alterada pela administração do Agnayls a qualquer momento para
     novos cadastros. O período de teste é concedido uma única vez por
     profissional; a exclusão e recriação da conta não gera direito a novo
     período de teste, conforme mecanismo de retenção de dados descrito na
@@ -62,8 +62,8 @@ window.AGNAIL_TERMOS_HTML = `
     <p><strong>5. Pagamento, Aprovação e Reajuste dos Planos</strong></p>
     <p>O pagamento da mensalidade é realizado via PIX, mediante envio do
     comprovante pela própria profissional, ficando o acesso condicionado à
-    análise e aprovação manual pela equipe do Agnails, que poderá levar até
-    alguns dias úteis. O Agnails não realiza cobranças automáticas ou
+    análise e aprovação manual pela equipe do Agnayls, que poderá levar até
+    alguns dias úteis. O Agnayls não realiza cobranças automáticas ou
     recorrentes sem ação da profissional. A ausência de pagamento após o
     vencimento do plano acarreta o bloqueio automático do acesso ao painel
     e do link público de agendamento, sem prejuízo da preservação dos dados
@@ -72,7 +72,7 @@ window.AGNAIL_TERMOS_HTML = `
     arrependimento previsto no art. 49 do Código de Defesa do Consumidor
     quando aplicável.</p>
     <p><strong>5.1. Reajuste dos Planos:</strong> Os valores dos planos de
-    assinatura podem ser reajustados periodicamente, a critério do Agnails.
+    assinatura podem ser reajustados periodicamente, a critério do Agnayls.
     Qualquer reajuste será comunicado com antecedência mínima de 30 (trinta)
     dias por meio do painel da profissional ou pelo e-mail cadastrado. O
     novo valor será aplicado somente a partir da renovação subsequente do
@@ -113,21 +113,21 @@ window.AGNAIL_TERMOS_HTML = `
 
     <p><strong>9. Propriedade Intelectual</strong></p>
     <p>Todos os direitos sobre o software, marca, layout, funcionalidades e
-    demais elementos da plataforma Agnails pertencem ao Agnails e/ou a seus
+    demais elementos da plataforma Agnayls pertencem ao Agnayls e/ou a seus
     licenciantes, sendo vedada a reprodução, modificação ou distribuição
     não autorizada. O conteúdo inserido pela profissional (fotos, nome do
     negócio, descrição de serviços) permanece de sua titularidade,
-    concedendo-se ao Agnails apenas a licença necessária para armazenar e
+    concedendo-se ao Agnayls apenas a licença necessária para armazenar e
     exibir esse conteúdo no âmbito da prestação do serviço.</p>
 
     <p><strong>10. Disponibilidade do Serviço e Limitação de Responsabilidade</strong></p>
-    <p>O Agnails envida esforços razoáveis para manter a plataforma
+    <p>O Agnayls envida esforços razoáveis para manter a plataforma
     disponível, segura e livre de erros, mas não garante operação
     ininterrupta ou isenta de falhas, podendo o serviço ser
     temporariamente interrompido para manutenção, atualizações ou por
     motivos alheios à sua vontade (falhas de provedores de infraestrutura,
     caso fortuito ou força maior). Na máxima extensão permitida pela lei
-    aplicável, o Agnails não se responsabiliza por danos indiretos, lucros
+    aplicável, o Agnayls não se responsabiliza por danos indiretos, lucros
     cessantes ou perda de dados decorrentes do uso ou da impossibilidade de
     uso da plataforma, respondendo apenas nos limites da legislação
     consumerista, quando aplicável.</p>
@@ -138,13 +138,13 @@ window.AGNAIL_TERMOS_HTML = `
     profissional poderá requerer a exportação de seus dados (histórico de
     agendamentos, lista de clientes, dados financeiros, entre outros) em
     formato estruturado e legível, mediante solicitação expressa ao suporte
-    do Agnails. A exportação será providenciada em até 15 (quinze) dias
+    do Agnayls. A exportação será providenciada em até 15 (quinze) dias
     úteis, desde que a conta esteja ativa e sem violações a estes Termos.</p>
     <p>Uma vez solicitada a exclusão, o acesso é bloqueado imediatamente e
     os dados permanecem armazenados por 90 (noventa) dias, prazo em que a
     conta pode ser restaurada mediante novo login com a mesma conta Google;
     após esse prazo, a exclusão torna-se definitiva e irreversível,
-    conforme detalhado na Política de Privacidade. O Agnails poderá também
+    conforme detalhado na Política de Privacidade. O Agnayls poderá também
     suspender ou encerrar contas que violem estes Termos, mediante
     comunicação prévia sempre que possível.</p>
 
@@ -166,11 +166,11 @@ window.AGNAIL_TERMOS_HTML = `
     <h4>Política de Privacidade</h4>
 
     <p><strong>1. Introdução e Compromisso com a LGPD</strong></p>
-    <p>Esta Política de Privacidade descreve como o Agnails, plataforma
+    <p>Esta Política de Privacidade descreve como o Agnayls, plataforma
     oferecida pela startup Tecminia (em constituição), coleta, utiliza,
     armazena, compartilha e protege dados pessoais tratados na plataforma,
     em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº
-    13.709/2018 – LGPD) e demais normas aplicáveis. O Agnails atua como
+    13.709/2018 – LGPD) e demais normas aplicáveis. O Agnayls atua como
     controlador dos dados cadastrais das profissionais e como operador, em
     determinados contextos, dos dados de clientes inseridos pelas
     profissionais na plataforma.</p>
@@ -209,10 +209,10 @@ window.AGNAIL_TERMOS_HTML = `
     <p><strong>4. Compartilhamento de Dados com Terceiros e Transferência Internacional</strong></p>
     <p>Os dados são armazenados em infraestrutura do Google Firebase
     (Google Cloud Platform), que atua como operador de dados sob instruções
-    do Agnails e mantém seus próprios padrões de segurança e conformidade
+    do Agnayls e mantém seus próprios padrões de segurança e conformidade
     internacional. Essa infraestrutura pode implicar a transferência
     internacional de dados para servidores localizados nos Estados Unidos
-    ou em outros países onde a Google mantém centros de dados. O Agnails
+    ou em outros países onde a Google mantém centros de dados. O Agnayls
     assegura que tais transferências são realizadas em conformidade com o
     art. 33 da LGPD, mediante adoção de cláusulas contratuais padrão ou
     outros mecanismos legais que garantam nível de proteção equivalente ao
@@ -243,7 +243,7 @@ window.AGNAIL_TERMOS_HTML = `
     dados originais e retidos pelo tempo estritamente necessário para as
     finalidades de recuperação operacional.</p>
     <p>Em caso de incidente de segurança que possa acarretar risco ou dano
-    relevante aos titulares de dados, o Agnails comunicará os titulares
+    relevante aos titulares de dados, o Agnayls comunicará os titulares
     afetados e a Autoridade Nacional de Proteção de Dados (ANPD), nos
     termos do art. 48 da LGPD, informando a natureza do incidente, os
     dados potencialmente afetados, as medidas de mitigação adotadas e as
@@ -302,7 +302,7 @@ window.AGNAIL_TERMOS_HTML = `
     <p><strong>11. Encarregado de Dados (DPO) e Contato</strong></p>
     <p>Dúvidas, solicitações relacionadas a dados pessoais ou o exercício
     dos direitos previstos na LGPD podem ser encaminhados ao Encarregado de
-    Proteção de Dados (DPO) do Agnails pelo e-mail
+    Proteção de Dados (DPO) do Agnayls pelo e-mail
     <strong>tecminia@gmail.com</strong> ou pelos canais de suporte
     disponíveis no painel da plataforma.</p>
 `;

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Agnails - firebase-config.js
+   Agnayls - firebase-config.js
    Módulo compartilhado: inicialização do Firebase, autenticação Google,
    helpers de Firestore e compactação/conversão de imagens para Base64.
    Incluído (via <script>) em: login.html, cobranca.html, manicures.html,
@@ -809,7 +809,7 @@ function agnailAbrirModalSuporte(aoFechar) {
         <button id="btnFecharSuporteAgnail" type="button" style="position:absolute; top:12px; right:12px; width:32px; height:32px; border-radius:50%; border:none; background:var(--rosa-claro,#fbeaef); color:var(--rosa-escuro,#c47d8f); cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-xmark"></i></button>
         <div style="font-size:2.2rem; margin-bottom:8px;">💬</div>
         <h2 style="font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:500; margin-bottom:8px;">Precisa de ajuda?</h2>
-        <p style="color:var(--texto-claro,#8a7a89); font-size:0.88rem; line-height:1.5; margin-bottom:18px;">Fale com a gente por e-mail para dúvidas e reclamações, ou veja tutoriais de como usar o Agnails no nosso Instagram.</p>
+        <p style="color:var(--texto-claro,#8a7a89); font-size:0.88rem; line-height:1.5; margin-bottom:18px;">Fale com a gente por e-mail para dúvidas e reclamações, ou veja tutoriais de como usar o Agnayls no nosso Instagram.</p>
         <a href="mailto:${AGNAIL_SUPORTE_EMAIL}" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; border-radius:var(--radius-sm,12px); background:var(--rosa-escuro,#c47d8f); color:#fff; text-decoration:none; font-weight:600; font-size:0.9rem; margin-bottom:10px;"><i class="fa-solid fa-envelope"></i> ${AGNAIL_SUPORTE_EMAIL}</a>
         <a href="${AGNAIL_SUPORTE_INSTAGRAM_URL}" target="_blank" rel="noopener" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; border-radius:var(--radius-sm,12px); background:#fff; color:var(--rosa-escuro,#c47d8f); border:2px solid var(--rosa,#e4a5b8); text-decoration:none; font-weight:600; font-size:0.9rem;"><i class="fa-brands fa-instagram"></i> @agnails_saas no Instagram</a>
       </div>
@@ -912,7 +912,7 @@ function agnailRenderizarControlesPaginacao(containerId, paginador, callbackAnte
 }
 
 /* Exposição global (o app usa scripts clássicos, não ES modules) */
-window.Agnails = {
+window.Agnayls = {
   auth, db,
   firebaseConfig,
   DIAS_TESTE_PADRAO: AGNAIL_DIAS_TESTE_PADRAO,

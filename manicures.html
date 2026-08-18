@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Agnails - Painel Administrativo</title>
+    <title>Agnayls - Painel Administrativo</title>
     <link rel="icon" href="assets/logo.png" type="image/png">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -806,7 +806,7 @@
     <div class="modal" style="max-width:500px; max-height:90vh; overflow-y:auto; padding:28px 24px;">
         <div style="text-align:center; margin-bottom:16px;">
             <div style="font-size:3.5rem; color:var(--rosa-escuro); margin-bottom:6px;">💅</div>
-            <h3 style="font-family:'Playfair Display',serif; font-size:1.6rem; color:var(--texto); margin-bottom:4px;">Bem-vinda ao Agnails!</h3>
+            <h3 style="font-family:'Playfair Display',serif; font-size:1.6rem; color:var(--texto); margin-bottom:4px;">Bem-vinda ao Agnayls!</h3>
             <p class="sub" style="color:var(--texto-claro); font-size:0.95rem;">Configure seu estúdio para começar a receber agendamentos.</p>
         </div>
 
@@ -842,8 +842,8 @@
                     <div id="servicosIniciaisLista" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;"></div>
                     <div style="display:flex; gap:4px; flex-wrap:wrap;">
                         <input type="text" id="novoServicoNomeInicial" placeholder="Ex: Manicure Simples" maxlength="50" style="flex:2; padding:8px 12px; border-radius:50px; border:2px solid #e8dfe4; background:#fdfafb; font-size:0.9rem;">
-                        <input type="number" id="novoServicoValorInicial" placeholder="Ex: 30" step="0.01" min="0" style="flex:1; padding:8px 12px; border-radius:50px; border:2px solid #e8dfe4; background:#fdfafb; font-size:0.9rem;">
-                        <input type="number" id="novoServicoDuracaoInicial" placeholder="Ex: 30" step="5" min="5" style="flex:1; padding:8px 12px; border-radius:50px; border:2px solid #e8dfe4; background:#fdfafb; font-size:0.9rem;">
+                        <input type="number" id="novoServicoValorInicial" placeholder="Valor do serviço" step="0.01" min="0" style="flex:1; padding:8px 12px; border-radius:50px; border:2px solid #e8dfe4; background:#fdfafb; font-size:0.9rem;">
+                        <input type="number" id="novoServicoDuracaoInicial" placeholder="Tempo medio do serviço" step="5" min="5" style="flex:1; padding:8px 12px; border-radius:50px; border:2px solid #e8dfe4; background:#fdfafb; font-size:0.9rem;">
                         <button type="button" class="btn btn-rosa btn-sm" id="btnAddServicoInicial">+</button>
                     </div>
                 </div>
@@ -895,7 +895,7 @@
         <div class="header-clicavel" id="headerPainelClicavel" style="display:flex; align-items:center; gap:14px; cursor:pointer; flex:1;" title="Editar logo, nome e slogan">
             <div class="header-logo" id="painelLogo"><i class="fa-solid fa-spa"></i></div>
             <div class="header-info">
-                <h1 id="painelNome">Agnails</h1>
+                <h1 id="painelNome">Agnayls</h1>
                 <p class="slogan" id="painelSlogan">Agendamento inteligente</p>
             </div>
         </div>
@@ -938,6 +938,11 @@
     </div>
 
     <div class="tab-content" id="tab-configuracoes">
+        <div class="card" id="cardValidadePlano">
+            <h2><i class="fa-solid fa-calendar-check"></i> Validade do Plano</h2>
+            <p id="textoValidadePlano" style="font-size:0.95rem; color:var(--texto); margin:0;">Carregando...</p>
+        </div>
+
         <div class="card">
             <h2><i class="fa-solid fa-sliders"></i> Configurações Gerais</h2>
 
@@ -1116,7 +1121,7 @@
     (async function() {
         // ============ AUTENTICAÇÃO E CONTROLE DE ACESSO ============
         const usuarioAtual = await new Promise((resolve) => {
-            Agnails.onAuthChange((user) => resolve(user));
+            Agnayls.onAuthChange((user) => resolve(user));
         });
 
         if (!usuarioAtual) {
@@ -1124,25 +1129,25 @@
             return;
         }
 
-        let assinaturaAtual = await Agnails.getAssinatura(usuarioAtual.uid);
+        let assinaturaAtual = await Agnayls.getAssinatura(usuarioAtual.uid);
         if (!assinaturaAtual) {
             // usuário autenticado mas sem estrutura (não deveria acontecer se passou pelo login.html)
             window.location.href = 'login.html';
             return;
         }
 
-        const statusAcessoAtual = Agnails.calcularStatusAcesso(assinaturaAtual);
+        const statusAcessoAtual = Agnayls.calcularStatusAcesso(assinaturaAtual);
         if (!statusAcessoAtual.acessoLiberado) {
             window.location.href = 'cobranca.html';
             return;
         }
 
         // Atualiza último login
-        Agnails.db.collection('usuarios').doc(usuarioAtual.uid).set({
+        Agnayls.db.collection('usuarios').doc(usuarioAtual.uid).set({
             ultimoLogin: firebase.firestore.Timestamp.now()
         }, { merge: true }).catch(() => {});
 
-        const manicureRef = Agnails.manicureRef(usuarioAtual.uid);
+        const manicureRef = Agnayls.manicureRef(usuarioAtual.uid);
 
         // Estas funções e listeners do modal de cadastro inicial precisam
         // estar prontos ANTES do "await aguardarCadastroInicial(...)" logo
@@ -1163,7 +1168,7 @@
             document.getElementById('configHoraInicioInicial').value = '';
             document.getElementById('configHoraFimInicial').value = '';
             document.getElementById('configIntervaloInicial').value = '';
-            Agnails.aplicarMascaraCelular(document.getElementById('configWhatsappInicial'));
+            Agnayls.aplicarMascaraCelular(document.getElementById('configWhatsappInicial'));
 
             // Limpar foto
             document.getElementById('previewLogoImg').src = '';
@@ -1181,7 +1186,7 @@
             const container = document.getElementById('servicosIniciaisLista');
             container.innerHTML = servicos.map((s, i) => `
                 <span class="servico-tag" style="background:var(--rosa-claro); border-radius:50px; padding:2px 10px; display:inline-flex; align-items:center; gap:4px; font-size:0.8rem; border:1px solid var(--rosa);">
-                    ${Agnails.escaparHTML(s.nome)} - R$ ${s.valor.toFixed(2)} (${s.duracao}min)
+                    ${Agnayls.escaparHTML(s.nome)} - R$ ${s.valor.toFixed(2)} (${s.duracao}min)
                     <button onclick="window.removerServicoInicial(${i})" style="background:none; border:none; color:var(--vermelho-escuro); cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
                 </span>
             `).join('');
@@ -1213,7 +1218,7 @@
         document.getElementById('configLogoInicial').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (file) {
-                const imgData = await Agnails.processarImagem(file);
+                const imgData = await Agnayls.processarImagem(file);
                 document.getElementById('previewLogoImg').src = imgData;
                 document.getElementById('previewLogoInicial').style.display = 'block';
                 window._logoInicial = imgData;
@@ -1256,7 +1261,7 @@
             });
         }
 
-        const perfilAtual = await Agnails.getPerfilCompleto(usuarioAtual.uid);
+        const perfilAtual = await Agnayls.getPerfilCompleto(usuarioAtual.uid);
         await aguardarAceiteTermos(perfilAtual);
         await aguardarCadastroInicial(perfilAtual);
 
@@ -1267,7 +1272,7 @@
         // sob demanda (ver "PAGINAÇÃO: AGENDAMENTOS" e "PAGINAÇÃO:
         // FINANCEIRO" mais abaixo), pra não baixar o histórico inteiro da
         // conta a cada abertura do painel.
-        const configuracoesDoc = await Agnails.getConfiguracoes(usuarioAtual.uid);
+        const configuracoesDoc = await Agnayls.getConfiguracoes(usuarioAtual.uid);
 
         window._agnailCache = {
             config: configuracoesDoc
@@ -1279,11 +1284,14 @@
         // o painel carregava (mesmo sem a aba Financeiro ser aberta),
         // porque o listener é recriado a cada load da página. Como
         // "financeiro" só cresce (um doc por atendimento concluído), o
-        // custo de cada login ia aumentando mês após mês. Substituído
-        // por um totalizador agregado (meta/resumoFinanceiro, mantido via
-        // FieldValue.increment em concluirAgendamento) lido sob demanda
-        // em carregarResumoFinanceiro(), só quando a aba Financeiro é
-        // aberta — ver essa função, na seção FINANCEIRO mais abaixo.
+        // custo de cada login ia aumentando mês após mês. Substituído por
+        // uma busca única (não um listener), feita sob demanda só quando a
+        // aba Financeiro é aberta, e limitada ao ano corrente — ver
+        // carregarResumoFinanceiro(), na seção FINANCEIRO mais abaixo (essa
+        // função passou por uma segunda correção depois: o totalizador
+        // agregado que ela lia numa versão anterior deixava "Este Mês"/
+        // "Este Ano" incompletos para contas com histórico mais antigo;
+        // ver o comentário [CORRIGIDO] na própria função).
 
         // Libera a tela (revela o painel principal)
         document.body.classList.remove('agnail-carregando');
@@ -1293,15 +1301,43 @@
         // deixar de ser válido — seja por ação do admin (bloqueio) ou pela
         // simples passagem do tempo (fim do teste grátis / vencimento).
         let _assinaturaObservada = assinaturaAtual;
+
+        // [NOVO] Card "Validade do Plano" (aba Configurações, acima de
+        // "Configurações Gerais"): mostra de forma simples e objetiva até
+        // quando o acesso atual vale, a partir da MESMA assinatura já
+        // observada aqui (sem nenhuma leitura extra do Firestore).
+        function formatarDataValidadePlano(timestamp) {
+            if (!timestamp) return '-';
+            const d = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return d.toLocaleDateString('pt-BR');
+        }
+        function atualizarCardValidadePlano() {
+            const el = document.getElementById('textoValidadePlano');
+            if (!el || !_assinaturaObservada) return;
+            const status = Agnayls.calcularStatusAcesso(_assinaturaObservada);
+            if (status.status === 'teste_gratuito') {
+                const dias = status.diasRestantesTeste;
+                el.innerHTML = `🎁 Teste grátis — expira em <strong>${formatarDataValidadePlano(_assinaturaObservada.fimTeste)}</strong> (${dias} dia${dias === 1 ? '' : 's'} restante${dias === 1 ? '' : 's'}).`;
+            } else if (status.status === 'ativo') {
+                el.innerHTML = `✅ Plano ativo — renovação em <strong>${formatarDataValidadePlano(_assinaturaObservada.vencimento)}</strong>.`;
+            } else if (status.status === 'aguardando_aprovacao') {
+                el.innerHTML = `⏳ Pagamento em análise — assim que for aprovado, a nova validade aparece aqui.`;
+            } else {
+                el.innerHTML = `⚠️ Plano expirado. Acesse a Cobrança para regularizar.`;
+            }
+        }
+        atualizarCardValidadePlano();
+
         manicureRef.collection('meta').doc('assinatura').onSnapshot((doc) => {
             if (!doc.exists) return;
             _assinaturaObservada = doc.data();
-            if (!Agnails.calcularStatusAcesso(_assinaturaObservada).acessoLiberado) {
+            atualizarCardValidadePlano();
+            if (!Agnayls.calcularStatusAcesso(_assinaturaObservada).acessoLiberado) {
                 window.location.href = 'cobranca.html';
             }
         });
         setInterval(() => {
-            if (!Agnails.calcularStatusAcesso(_assinaturaObservada).acessoLiberado) {
+            if (!Agnayls.calcularStatusAcesso(_assinaturaObservada).acessoLiberado) {
                 window.location.href = 'cobranca.html';
             }
         }, 60000);
@@ -1441,7 +1477,7 @@
             document.getElementById('painelSlogan').textContent = config.slogan || '';
             const logoEl = document.getElementById('painelLogo');
             if (config.imagem) {
-                logoEl.innerHTML = `<img src="${Agnails.escaparAtributo(config.imagem)}" alt="Logo">`;
+                logoEl.innerHTML = `<img src="${Agnayls.escaparAtributo(config.imagem)}" alt="Logo">`;
             } else {
                 logoEl.innerHTML = '<i class="fa-solid fa-spa"></i>';
             }
@@ -1545,7 +1581,7 @@
 
         // ============ PAGINAÇÃO: AGENDAMENTOS ============
         // [ALTERADO] Não carrega mais a coleção inteira: busca 20 por vez
-        // direto do Firestore (Agnails.criarPaginador, em
+        // direto do Firestore (Agnayls.criarPaginador, em
         // firebase-config.js). Sem filtro de data, só mostra status
         // "agendado" (concluídos/cancelados ficam ocultos — item 6 já
         // implementado antes); com filtro de data, mostra todos os
@@ -1575,7 +1611,7 @@
         async function carregarAgendamentos(filtroData = null) {
             const lista = document.getElementById('listaAgendamentos');
             filtroDataAgendaAtual = filtroData;
-            paginadorAgendamentos = Agnails.criarPaginador(construirQueryAgendamentos(filtroData), 20);
+            paginadorAgendamentos = Agnayls.criarPaginador(construirQueryAgendamentos(filtroData), 20);
             lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Carregando...</p>';
             document.getElementById('paginacaoAgendamentos').innerHTML = '';
             try {
@@ -1586,20 +1622,20 @@
                 return;
             }
             renderizarListaAgendamentos(itensPaginaAtualAgendamentos);
-            Agnails.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
+            Agnayls.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
         }
 
         async function irParaProximaPaginaAgendamentos() {
             if (!paginadorAgendamentos || !paginadorAgendamentos.temProxima()) return;
             itensPaginaAtualAgendamentos = ordenarAgendamentosLocalmente(await paginadorAgendamentos.proxima());
             renderizarListaAgendamentos(itensPaginaAtualAgendamentos);
-            Agnails.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
+            Agnayls.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
         }
         async function irParaPaginaAnteriorAgendamentos() {
             if (!paginadorAgendamentos || !paginadorAgendamentos.temAnterior()) return;
             itensPaginaAtualAgendamentos = ordenarAgendamentosLocalmente(await paginadorAgendamentos.anterior());
             renderizarListaAgendamentos(itensPaginaAtualAgendamentos);
-            Agnails.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
+            Agnayls.renderizarControlesPaginacao('paginacaoAgendamentos', paginadorAgendamentos, irParaPaginaAnteriorAgendamentos, irParaProximaPaginaAgendamentos);
         }
 
         async function recarregarListaAgendamentos() {
@@ -1630,13 +1666,13 @@
                 // sem login), então precisam ser escapados antes de entrar
                 // em innerHTML — qualquer um pode ter digitado HTML/script
                 // nesses campos.
-                const nomeSeguro = Agnails.escaparHTML(a.nome);
-                const servicosStr = Agnails.escaparHTML((a.servicos || []).join(', '));
-                const tipoAtend = Agnails.escaparHTML(a.tipoAtendimento || 'No local');
-                const enderecoStr = a.endereco ? '• End: ' + Agnails.escaparHTML(a.endereco) : '';
-                const obsStr = a.observacoes ? '• Obs: ' + Agnails.escaparHTML(a.observacoes) : '';
-                const formaPagamentoSeguro = Agnails.escaparHTML(a.formaPagamento);
-                const statusSeguro = Agnails.escaparHTML(a.status);
+                const nomeSeguro = Agnayls.escaparHTML(a.nome);
+                const servicosStr = Agnayls.escaparHTML((a.servicos || []).join(', '));
+                const tipoAtend = Agnayls.escaparHTML(a.tipoAtendimento || 'No local');
+                const enderecoStr = a.endereco ? '• End: ' + Agnayls.escaparHTML(a.endereco) : '';
+                const obsStr = a.observacoes ? '• Obs: ' + Agnayls.escaparHTML(a.observacoes) : '';
+                const formaPagamentoSeguro = Agnayls.escaparHTML(a.formaPagamento);
+                const statusSeguro = Agnayls.escaparHTML(a.status);
 
                 return `
                 <div class="agendamento-item">
@@ -1682,21 +1718,21 @@
 
             // Dados do cliente vêm do formulário público (sem login) —
             // sempre escapar antes de inserir via innerHTML.
-            const nomeSeguro = Agnails.escaparHTML(ag.nome);
+            const nomeSeguro = Agnayls.escaparHTML(ag.nome);
             const telefoneDigitos = (ag.telefone || '').replace(/\D/g, '');
-            const telefoneSeguro = Agnails.escaparHTML(ag.telefone);
-            const servicosSeguro = Agnails.escaparHTML((ag.servicos || []).join(', '));
-            const pagamentoSeguro = Agnails.escaparHTML(ag.formaPagamento);
-            const tipoAtendSeguro = Agnails.escaparHTML(ag.tipoAtendimento || 'No local');
-            const obsSeguro = Agnails.escaparHTML(ag.observacoes || 'Nenhuma');
-            const statusSeguro = Agnails.escaparHTML(ag.status);
-            const idSeguro = Agnails.escaparHTML(ag.id);
+            const telefoneSeguro = Agnayls.escaparHTML(ag.telefone);
+            const servicosSeguro = Agnayls.escaparHTML((ag.servicos || []).join(', '));
+            const pagamentoSeguro = Agnayls.escaparHTML(ag.formaPagamento);
+            const tipoAtendSeguro = Agnayls.escaparHTML(ag.tipoAtendimento || 'No local');
+            const obsSeguro = Agnayls.escaparHTML(ag.observacoes || 'Nenhuma');
+            const statusSeguro = Agnayls.escaparHTML(ag.status);
+            const idSeguro = Agnayls.escaparHTML(ag.id);
 
             let html = `
                 <p><strong>👤 Cliente:</strong> ${nomeSeguro}</p>
                 <p><strong>📱 WhatsApp:</strong> <a href="https://wa.me/55${telefoneDigitos}" target="_blank">${telefoneSeguro}</a></p>
                 <p><strong>📅 Data:</strong> ${dataFormatada}</p>
-                <p><strong>⏰ Horário:</strong> ${Agnails.escaparHTML(ag.horario)}</p>
+                <p><strong>⏰ Horário:</strong> ${Agnayls.escaparHTML(ag.horario)}</p>
                 <p><strong>💅 Serviços:</strong> ${servicosSeguro}</p>
                 <p><strong>💰 Valor:</strong> R$ ${ag.valor.toFixed(2)}</p>
                 <p><strong>💳 Pagamento:</strong> ${pagamentoSeguro}</p>
@@ -1705,7 +1741,7 @@
 
             if (ag.endereco) {
                 const enderecoEnc = encodeURIComponent(ag.endereco);
-                html += `<p><strong>📍 Endereço:</strong> <a href="https://www.google.com/maps/search/?api=1&query=${enderecoEnc}" target="_blank">${Agnails.escaparHTML(ag.endereco)}</a></p>`;
+                html += `<p><strong>📍 Endereço:</strong> <a href="https://www.google.com/maps/search/?api=1&query=${enderecoEnc}" target="_blank">${Agnayls.escaparHTML(ag.endereco)}</a></p>`;
             } else {
                 html += `<p><strong>📍 Endereço:</strong> Não informado</p>`;
             }
@@ -1754,7 +1790,7 @@
                 // Libera o(s) horário(s) na agenda pública para que outra
                 // pessoa possa reservá-los.
                 try {
-                    await Agnails.liberarSlotsAgendamento(usuarioAtual.uid, ag);
+                    await Agnayls.liberarSlotsAgendamento(usuarioAtual.uid, ag);
                 } catch (e) {
                     console.error('Erro ao liberar horário na agenda pública:', e);
                 }
@@ -1767,8 +1803,8 @@
             const overlay = document.getElementById('overlayAcao');
             document.getElementById('tituloAcao').textContent = 'Concluir Agendamento';
             document.getElementById('conteudoAcao').innerHTML = `
-              <p><strong>Cliente:</strong> ${Agnails.escaparHTML(ag.nome)}</p>
-              <p><strong>Serviços:</strong> ${Agnails.escaparHTML((ag.servicos || []).join(', '))}</p>
+              <p><strong>Cliente:</strong> ${Agnayls.escaparHTML(ag.nome)}</p>
+              <p><strong>Serviços:</strong> ${Agnayls.escaparHTML((ag.servicos || []).join(', '))}</p>
               <p><strong>Valor base:</strong> R$ ${ag.valor.toFixed(2)}</p>
               <div class="input-group">
                 <label>Valor extra (R$):</label>
@@ -1811,7 +1847,7 @@
                 // agendamentos existem no total.
                 const novoFinanceiroId = 'fin_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
                 try {
-                    const batch = Agnails.db.batch();
+                    const batch = Agnayls.db.batch();
                     batch.update(manicureRef.collection('agendamentos').doc(ag.id), {
                         status: 'concluido',
                         valorFinal: totalFinal,
@@ -1829,19 +1865,21 @@
                         observacoes: ag.observacoes,
                         dataRegistro: new Date().toISOString()
                     });
-                    // [NOVO - CUSTO/ESCALABILIDADE] Mantém, no mesmo lote
-                    // atômico, um totalizador agregado por ano e por mês
-                    // (meta/resumoFinanceiro) via FieldValue.increment().
-                    // É esse documento pequeno que os cards "Este Ano" e
-                    // "Média Mensal" passam a ler (ver
-                    // carregarResumoFinanceiro, na aba Financeiro), em vez
-                    // de somar a coleção "financeiro" inteira toda vez.
-                    const anoAg = ag.data.slice(0, 4);
-                    const mesAg = ag.data.slice(0, 7);
-                    batch.set(manicureRef.collection('meta').doc('resumoFinanceiro'), {
-                        ['porAno.' + anoAg]: firebase.firestore.FieldValue.increment(totalFinal),
-                        ['porMes.' + mesAg]: firebase.firestore.FieldValue.increment(totalFinal)
-                    }, { merge: true });
+                    // [REMOVIDO - CORREÇÃO: "Este Mês"/"Este Ano" zerados]
+                    // Havia aqui uma escrita extra num totalizador agregado
+                    // (meta/resumoFinanceiro, via FieldValue.increment()) que
+                    // os cards "Este Mês"/"Este Ano"/"Média Mensal" da aba
+                    // Financeiro passaram a ler. O problema: esse documento
+                    // só começava a ser alimentado a PARTIR do dia em que essa
+                    // versão entrou no ar — qualquer conta com histórico
+                    // anterior ficava com "Este Mês"/"Este Ano" mostrando só
+                    // uma fração (ou nada) do faturamento real, mesmo tendo
+                    // atendimentos concluídos naquele mês/ano, dando a
+                    // impressão de que só "Hoje" funcionava. Trocado por uma
+                    // busca direta e já limitada ao ano corrente em
+                    // carregarResumoFinanceiro() (ver aba FINANCEIRO abaixo) —
+                    // sempre correta, sem depender de nenhum totalizador
+                    // "pré-aquecido".
                     await batch.commit();
                 } catch (e) {
                     console.error('Erro ao concluir agendamento:', e);
@@ -1875,16 +1913,21 @@
         // [ALTERADO] A lista de transações continua paginada de verdade
         // (20 por vez, direto do Firestore, ordenada por data).
         //
-        // [CORRIGIDO - CUSTO/ESCALABILIDADE] Os cards de resumo
-        // (Hoje/Este Mês/Este Ano/Média Mensal) não usam mais nenhuma
-        // leitura de coleção inteira nem listener em tempo real — "Este
-        // Ano" e "Este Mês" vêm de um único documento agregado
-        // (meta/resumoFinanceiro), incrementado atomicamente a cada
-        // atendimento concluído (ver concluirAgendamento), e "Hoje" vem
-        // de uma busca filtrada só pelo dia (poucos documentos). O custo
-        // de abrir esta aba fica praticamente constante, não cresce mais
-        // com o tamanho do histórico da conta. "Média Mensal" continua
-        // significando "média deste ano até o mês atual".
+        // [CORRIGIDO - "Este Mês"/"Este Ano" ficavam zerados] Os cards de
+        // resumo liam antes um documento agregado (meta/resumoFinanceiro),
+        // incrementado a cada atendimento concluído — mas esse documento só
+        // começava a existir/crescer a partir do dia em que aquela versão
+        // entrou no ar. Qualquer conta com atendimentos concluídos ANTES
+        // disso ficava com "Este Mês" e "Este Ano" mostrando um valor
+        // incompleto (ou R$ 0,00), mesmo tendo faturamento real no
+        // período — só "Hoje" (que sempre foi uma busca direta) continuava
+        // certo. Agora os quatro valores (Hoje/Este Mês/Este Ano/Média
+        // Mensal) vêm de UMA ÚNICA busca ao "financeiro", filtrada só pelo
+        // ANO CORRENTE (não a conta inteira), e somados aqui no cliente —
+        // sempre corretos, sem depender de nenhum totalizador "pré-aquecido"
+        // que pudesse estar desatualizado ou incompleto. O custo cresce no
+        // máximo com o volume de UM ano por vez que a aba é aberta, nunca
+        // com o histórico acumulado de todos os anos da conta.
         let paginadorFinanceiro = null;
 
         function construirQueryFinanceiro(filtroInicio, filtroFim) {
@@ -1899,23 +1942,27 @@
             const anoAtual = String(agora.getFullYear());
             const hojeStr = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
             const mesAtualStr = hojeStr.slice(0, 7);
+            const inicioAnoStr = anoAtual + '-01-01';
             const numeroMesAtual = agora.getMonth() + 1;
 
             let totalAno = 0, totalMes = 0, totalHoje = 0;
             try {
-                // As duas buscas abaixo são independentes e leves: o
-                // documento agregado é sempre 1 leitura (não importa
-                // quantos atendimentos já foram concluídos na conta), e a
-                // busca de "hoje" é filtrada só pelo dia corrente — bem
-                // diferente de reler o ano inteiro.
-                const [resumoSnap, hojeSnap] = await Promise.all([
-                    manicureRef.collection('meta').doc('resumoFinanceiro').get(),
-                    manicureRef.collection('financeiro').where('data', '==', hojeStr).get()
-                ]);
-                const resumo = resumoSnap.exists ? resumoSnap.data() : {};
-                totalAno = (resumo.porAno && resumo.porAno[anoAtual]) || 0;
-                totalMes = (resumo.porMes && resumo.porMes[mesAtualStr]) || 0;
-                totalHoje = hojeSnap.docs.reduce((s, d) => s + (d.data().valor || 0), 0);
+                // Uma única busca, limitada ao ano corrente (data entre o
+                // dia 1º de janeiro e hoje) — "Este Mês" e "Hoje" são
+                // subconjuntos desse mesmo resultado, filtrados aqui no
+                // cliente, sem precisar de buscas adicionais ao Firestore.
+                const anoSnap = await manicureRef.collection('financeiro')
+                    .where('data', '>=', inicioAnoStr)
+                    .where('data', '<=', hojeStr)
+                    .get();
+
+                anoSnap.docs.forEach((d) => {
+                    const dados = d.data();
+                    const valor = dados.valor || 0;
+                    totalAno += valor;
+                    if (dados.data >= mesAtualStr) totalMes += valor;
+                    if (dados.data === hojeStr) totalHoje += valor;
+                });
             } catch (e) {
                 console.error('Erro ao carregar resumo financeiro:', e);
             }
@@ -1941,10 +1988,10 @@
             lista.innerHTML = itens.map(f => `
             <div class="financeiro-item">
               <div class="linha-topo-financeiro">
-                <span class="nome-cliente-financeiro">${Agnails.escaparHTML(f.cliente)}</span>
+                <span class="nome-cliente-financeiro">${Agnayls.escaparHTML(f.cliente)}</span>
                 <span class="valor-financeiro">R$ ${f.valor.toFixed(2)}</span>
               </div>
-              <div class="linha-detalhe-financeiro">${Agnails.escaparHTML(f.horario)} • ${new Date(f.data+'T00:00:00').toLocaleDateString('pt-BR')}</div>
+              <div class="linha-detalhe-financeiro">${Agnayls.escaparHTML(f.horario)} • ${new Date(f.data+'T00:00:00').toLocaleDateString('pt-BR')}</div>
             </div>`).join('');
         }
 
@@ -1952,7 +1999,7 @@
             carregarResumoFinanceiro(); // não bloqueia a lista paginada abaixo
 
             const lista = document.getElementById('listaFinanceiro');
-            paginadorFinanceiro = Agnails.criarPaginador(construirQueryFinanceiro(filtroInicio, filtroFim), 20);
+            paginadorFinanceiro = Agnayls.criarPaginador(construirQueryFinanceiro(filtroInicio, filtroFim), 20);
             lista.innerHTML = '<p style="color:var(--texto-claro);text-align:center;">Carregando...</p>';
             document.getElementById('paginacaoFinanceiro').innerHTML = '';
             let itens;
@@ -1964,20 +2011,20 @@
                 return;
             }
             renderizarListaFinanceiro(itens);
-            Agnails.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
+            Agnayls.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
         }
 
         async function irParaProximaPaginaFinanceiro() {
             if (!paginadorFinanceiro || !paginadorFinanceiro.temProxima()) return;
             const itens = await paginadorFinanceiro.proxima();
             renderizarListaFinanceiro(itens);
-            Agnails.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
+            Agnayls.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
         }
         async function irParaPaginaAnteriorFinanceiro() {
             if (!paginadorFinanceiro || !paginadorFinanceiro.temAnterior()) return;
             const itens = await paginadorFinanceiro.anterior();
             renderizarListaFinanceiro(itens);
-            Agnails.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
+            Agnayls.renderizarControlesPaginacao('paginacaoFinanceiro', paginadorFinanceiro, irParaPaginaAnteriorFinanceiro, irParaProximaPaginaFinanceiro);
         }
 
         document.getElementById('aplicarFiltroFinanceiro').addEventListener('click', () => {
@@ -1997,10 +2044,11 @@
         }
 
         function carregarConfiguracoes() {
+            atualizarCardValidadePlano();
             config = getConfig();
             document.getElementById('configNome').value = config.nomeEmpresa || '';
             document.getElementById('configSlogan').value = config.slogan || '';
-            document.getElementById('configWhatsapp').value = config.whatsapp ? Agnails.mascararCelular(config.whatsapp) : '';
+            document.getElementById('configWhatsapp').value = config.whatsapp ? Agnayls.mascararCelular(config.whatsapp) : '';
             document.getElementById('configHoraInicio').value = config.horarioInicio || '';
             document.getElementById('configHoraFim').value = config.horarioFim || '';
             document.getElementById('configIntervalo').value = config.intervaloMinutos || '';
@@ -2014,7 +2062,7 @@
             // compartilhado — quem realmente identifica a manicure é o
             // "m=<uid>", que não muda mesmo que o nome seja alterado
             // depois. Links já compartilhados antes continuam funcionando.
-            const nomeSlug = agnailSlugificar(config.nomeEmpresa) || 'agnails';
+            const nomeSlug = agnailSlugificar(config.nomeEmpresa) || 'agnayls';
             const link = window.location.origin + window.location.pathname.replace('manicures.html', 'agendamentos.html') + '?nome=' + nomeSlug + '&m=' + usuarioAtual.uid;
             document.getElementById('linkCompartilhar').value = link;
             initTemas();
@@ -2038,7 +2086,7 @@
             }
             lista.innerHTML = (config.servicos || []).map((s, i) => `
               <div class="servico-item">
-                <span>${Agnails.escaparHTML(s.nome)} - R$ ${s.valor.toFixed(2)} (${s.duracao || 30} min)</span>
+                <span>${Agnayls.escaparHTML(s.nome)} - R$ ${s.valor.toFixed(2)} (${s.duracao || 30} min)</span>
                 <button class="btn-icon" onclick="window.removerServico(${i})"><i class="fa-solid fa-trash"></i></button>
               </div>`).join('');
         }
@@ -2136,7 +2184,7 @@
             lista.innerHTML = folgas.map(data => `
                 <span class="folga-item">
                     ${new Date(data+'T00:00:00').toLocaleDateString('pt-BR')}
-                    <button onclick="window.removerFolga('${Agnails.escaparAtributo(data)}')" title="Remover"><i class="fa-solid fa-xmark"></i></button>
+                    <button onclick="window.removerFolga('${Agnayls.escaparAtributo(data)}')" title="Remover"><i class="fa-solid fa-xmark"></i></button>
                 </span>
             `).join('');
         }
@@ -2189,7 +2237,7 @@
             }
             select.innerHTML = '<option value="">Selecione um agendamento...</option>' +
                 itensSelectCancelar.map(a =>
-                    `<option value="${Agnails.escaparAtributo(a.id)}">${Agnails.escaparHTML(a.nome)} - ${new Date(a.data+'T00:00:00').toLocaleDateString('pt-BR')} ${Agnails.escaparHTML(a.horario)}</option>`
+                    `<option value="${Agnayls.escaparAtributo(a.id)}">${Agnayls.escaparHTML(a.nome)} - ${new Date(a.data+'T00:00:00').toLocaleDateString('pt-BR')} ${Agnayls.escaparHTML(a.horario)}</option>`
                 ).join('');
         }
         document.getElementById('btnCancelarAgendamento').addEventListener('click', async () => {
@@ -2208,7 +2256,7 @@
                     return;
                 }
                 try {
-                    await Agnails.liberarSlotsAgendamento(usuarioAtual.uid, agendamentoCancelado);
+                    await Agnayls.liberarSlotsAgendamento(usuarioAtual.uid, agendamentoCancelado);
                 } catch (e) {
                     console.error('Erro ao liberar horário na agenda pública:', e);
                 }
@@ -2232,7 +2280,7 @@
         document.getElementById('inputLogo').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (file) {
-                config.imagem = await Agnails.processarImagem(file);
+                config.imagem = await Agnayls.processarImagem(file);
                 atualizarHeaderPainel();
                 salvarConfigAuto();
                 mostrarToastPainel('Logo atualizada.', 'sucesso');
@@ -2298,7 +2346,7 @@
             salvarConfigAuto();
         });
 
-        Agnails.aplicarMascaraCelular(document.getElementById('configWhatsapp'));
+        Agnayls.aplicarMascaraCelular(document.getElementById('configWhatsapp'));
 
         function mostrarToastPainel(msg, tipo) {
             const toast = document.getElementById('toastPainel');
@@ -2314,7 +2362,7 @@
 
         // ============ SUPORTE ============
         document.getElementById('btnAbrirSuporteConfig').addEventListener('click', function() {
-            Agnails.abrirModalSuporte();
+            Agnayls.abrirModalSuporte();
         });
 
         // ============ CONSULTAR TERMOS (sem bloquear, só para leitura) ============
@@ -2336,7 +2384,7 @@
 
         // ============ SAIR / EXCLUIR CONTA ============
         document.getElementById('btnSairPainel').addEventListener('click', async function() {
-            await Agnails.logout();
+            await Agnayls.logout();
             window.location.href = 'login.html';
         });
 
@@ -2344,8 +2392,8 @@
             const confirmar = confirm('Tem certeza que deseja excluir sua conta? Seu acesso será bloqueado imediatamente. Seus dados ficam guardados por 90 dias; fazer login novamente com esta mesma conta dentro desse prazo restaura tudo automaticamente.');
             if (!confirmar) return;
             try {
-                await Agnails.solicitarExclusaoConta(usuarioAtual.uid, usuarioAtual.email);
-                await Agnails.logout();
+                await Agnayls.solicitarExclusaoConta(usuarioAtual.uid, usuarioAtual.email);
+                await Agnayls.logout();
                 alert('Sua conta foi marcada para exclusão. Você pode fazer login novamente dentro de 90 dias para restaurá-la.');
                 window.location.href = 'login.html';
             } catch (e) {

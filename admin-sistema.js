@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Agnails - admin-sistema.js
+   Agnayls - admin-sistema.js
    Lógica do Painel Administrativo do sistema (super-admin), separado do
    painel de cada manicure (manicures.html).
 
@@ -51,7 +51,7 @@
             expirado: ['badge-expirado', 'Plano Expirado'],
             exclusao_solicitada: ['badge-exclusao', 'Conta em Exclusão']
         };
-        const [classe, texto] = mapa[status] || ['badge-expirado', Agnails.escaparHTML(status)];
+        const [classe, texto] = mapa[status] || ['badge-expirado', Agnayls.escaparHTML(status)];
         return `<span class="badge ${classe}">${texto}</span>`;
     }
 
@@ -83,7 +83,7 @@
        manualmente — ver comentário no topo deste arquivo). */
     async function registrarLogAdmin(acao, uidAlvo, detalhes) {
         try {
-            await Agnails.db.collection('administracao').doc('logsAdmin').collection('entradas').add({
+            await Agnayls.db.collection('administracao').doc('logsAdmin').collection('entradas').add({
                 admin: adminAtual ? adminAtual.email : null,
                 acao,
                 uidAlvo: uidAlvo || null,
@@ -103,17 +103,17 @@
        documento do usuário > campo "tipo" = "admin"). Veja o arquivo
        SETUP.md para o passo a passo. */
     async function verificarAdmin(user) {
-        const usuarioDoc = await Agnails.db.collection('usuarios').doc(user.uid).get();
+        const usuarioDoc = await Agnayls.db.collection('usuarios').doc(user.uid).get();
         return usuarioDoc.exists && usuarioDoc.data().tipo === 'admin';
     }
 
     document.getElementById('btnLoginAdmin').addEventListener('click', async function () {
         try {
-            const cred = await Agnails.loginGoogle();
+            const cred = await Agnayls.loginGoogle();
             const autorizado = await verificarAdmin(cred.user);
             if (!autorizado) {
                 document.getElementById('avisoNegado').classList.add('show');
-                await Agnails.logout();
+                await Agnayls.logout();
                 return;
             }
             iniciarPainel(cred.user);
@@ -124,13 +124,13 @@
     });
 
     document.getElementById('btnSairAdmin').addEventListener('click', async function () {
-        await Agnails.logout();
+        await Agnayls.logout();
         window.location.reload();
     });
 
-    Agnails.onAuthChange(async function (user) {
+    Agnayls.onAuthChange(async function (user) {
         if (!user) return;
-        const usuarioDoc = await Agnails.db.collection('usuarios').doc(user.uid).get();
+        const usuarioDoc = await Agnayls.db.collection('usuarios').doc(user.uid).get();
         if (usuarioDoc.exists && usuarioDoc.data().tipo === 'admin') {
             iniciarPainel(user);
         }
@@ -144,7 +144,7 @@
         document.getElementById('tabsBottomAdmin').classList.remove('escondido');
         document.getElementById('emailAdminLogado').textContent = user.email;
 
-        configSistemaCache = await Agnails.getConfigSistema();
+        configSistemaCache = await Agnayls.getConfigSistema();
         preencherFormConfig();
 
         await Promise.all([carregarManicures(), carregarPagamentosPendentes(), carregarContasExclusao()]);
@@ -167,7 +167,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i>';
         try {
-            configSistemaCache = await Agnails.getConfigSistema();
+            configSistemaCache = await Agnayls.getConfigSistema();
             preencherFormConfig();
             await Promise.all([carregarManicures(), carregarPagamentosPendentes(), carregarContasExclusao()]);
             mostrarToast('Dados atualizados!', 'sucesso');
@@ -182,7 +182,7 @@
 
     /* ---------------- DASHBOARD: LISTA DE MANICURES ---------------- */
     // [ALTERADO] Não busca mais TODAS as manicures de uma vez — pagina de
-    // verdade, 50 por página, direto do Firestore (Agnails.criarPaginador,
+    // verdade, 50 por página, direto do Firestore (Agnayls.criarPaginador,
     // em firebase-config.js). Isso limita o custo de "1 + 3×N" leituras
     // (perfil + assinatura por manicure) a "1 + 3×50" por página, em vez
     // de crescer para sempre com o total de contas cadastradas.
@@ -193,7 +193,7 @@
     // DESC) já existir, o Firestore mostra um erro no console com um
     // link pra criar esse índice com um clique.
     function construirQueryManicures() {
-        return Agnails.db.collection('usuarios').where('tipo', '==', 'manicure').orderBy('criadoEm', 'desc');
+        return Agnayls.db.collection('usuarios').where('tipo', '==', 'manicure').orderBy('criadoEm', 'desc');
     }
 
     async function buscarDetalhesManicures(usuarios) {
@@ -201,10 +201,10 @@
         for (const usuario of usuarios) {
             const uid = usuario.id;
             const [perfil, assinatura] = await Promise.all([
-                Agnails.getPerfilCompleto(uid),
-                Agnails.getAssinatura(uid)
+                Agnayls.getPerfilCompleto(uid),
+                Agnayls.getAssinatura(uid)
             ]);
-            const statusAcesso = Agnails.calcularStatusAcesso(assinatura);
+            const statusAcesso = Agnayls.calcularStatusAcesso(assinatura);
             lista.push({ uid, usuario, perfil, assinatura, statusAcesso });
         }
         return lista;
@@ -212,7 +212,7 @@
 
     async function carregarManicures() {
         const container = document.getElementById('listaManicures');
-        paginadorManicures = Agnails.criarPaginador(construirQueryManicures(), 50);
+        paginadorManicures = Agnayls.criarPaginador(construirQueryManicures(), 50);
         container.innerHTML = '<div class="vazio">Carregando...</div>';
         document.getElementById('paginacaoManicures').innerHTML = '';
         let usuarios;
@@ -226,7 +226,7 @@
         itensPaginaAtualManicures = await buscarDetalhesManicures(usuarios);
         renderizarListaManicures(itensPaginaAtualManicures);
         renderizarStatsPagina(itensPaginaAtualManicures);
-        Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
+        Agnayls.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
     }
 
     async function irParaProximaPaginaManicures() {
@@ -235,7 +235,7 @@
         itensPaginaAtualManicures = await buscarDetalhesManicures(usuarios);
         renderizarListaManicures(itensPaginaAtualManicures);
         renderizarStatsPagina(itensPaginaAtualManicures);
-        Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
+        Agnayls.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
     }
     async function irParaPaginaAnteriorManicures() {
         if (!paginadorManicures || !paginadorManicures.temAnterior()) return;
@@ -243,7 +243,7 @@
         itensPaginaAtualManicures = await buscarDetalhesManicures(usuarios);
         renderizarListaManicures(itensPaginaAtualManicures);
         renderizarStatsPagina(itensPaginaAtualManicures);
-        Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
+        Agnayls.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
     }
     // Recarrega a MESMA página depois de uma ação (bloquear, liberar,
     // aprovar pagamento etc.) — evita jogar o admin de volta pra página 1
@@ -254,7 +254,7 @@
         itensPaginaAtualManicures = await buscarDetalhesManicures(usuarios);
         renderizarListaManicures(itensPaginaAtualManicures);
         renderizarStatsPagina(itensPaginaAtualManicures);
-        Agnails.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
+        Agnayls.renderizarControlesPaginacao('paginacaoManicures', paginadorManicures, irParaPaginaAnteriorManicures, irParaProximaPaginaManicures);
     }
 
     function renderizarStatsPagina(lista) {
@@ -284,10 +284,10 @@
             return;
         }
         container.innerHTML = lista.map(m => {
-            const nome = Agnails.escaparHTML(m.perfil?.nomeEmpresa || m.usuario.nome || 'Sem nome');
-            const email = Agnails.escaparHTML(m.usuario.email || '');
+            const nome = Agnayls.escaparHTML(m.perfil?.nomeEmpresa || m.usuario.nome || 'Sem nome');
+            const email = Agnayls.escaparHTML(m.usuario.email || '');
             const foto = m.usuario.foto
-                ? `<img src="${Agnails.escaparAtributo(m.usuario.foto)}" alt="">`
+                ? `<img src="${Agnayls.escaparAtributo(m.usuario.foto)}" alt="">`
                 : `<i class="fa-solid fa-user"></i>`;
             const venc = m.assinatura?.vencimento ? formatarData(m.assinatura.vencimento) : '-';
             const ultimoPag = m.assinatura?.ultimoPagamento ? formatarData(m.assinatura.ultimoPagamento) : '-';
@@ -306,20 +306,20 @@
                     <span>Último pgto: <strong>${ultimoPag}</strong></span>
                 </div>
                 ${badgeStatus(m.statusAcesso.status)}
-                <button class="btn-detalhe" onclick="AgnailsAdmin.abrirDetalhe('${m.uid}')">Detalhes</button>
+                <button class="btn-detalhe" onclick="AgnaylsAdmin.abrirDetalhe('${m.uid}')">Detalhes</button>
             </div>`;
         }).join('');
     }
 
     /* ---------------- MODAL DE DETALHE + GESTÃO ---------------- */
-    window.AgnailsAdmin = window.AgnailsAdmin || {};
+    window.AgnaylsAdmin = window.AgnaylsAdmin || {};
 
-    window.AgnailsAdmin.abrirDetalhe = function (uid) {
+    window.AgnaylsAdmin.abrirDetalhe = function (uid) {
         const m = itensPaginaAtualManicures.find(x => x.uid === uid);
         if (!m) return;
-        const nome = Agnails.escaparHTML(m.perfil?.nomeEmpresa || m.usuario.nome || 'Sem nome');
-        const responsavel = Agnails.escaparHTML(m.perfil?.nomeResponsavel || '-');
-        const email = Agnails.escaparHTML(m.usuario.email || '-');
+        const nome = Agnayls.escaparHTML(m.perfil?.nomeEmpresa || m.usuario.nome || 'Sem nome');
+        const responsavel = Agnayls.escaparHTML(m.perfil?.nomeResponsavel || '-');
+        const email = Agnayls.escaparHTML(m.usuario.email || '-');
 
         document.getElementById('conteudoDetalheManicure').innerHTML = `
             <div class="linha"><span class="lbl">Nome</span><span>${nome}</span></div>
@@ -335,10 +335,10 @@
                 <input type="date" id="inputNovoVencimento" style="width:100%; padding:9px; border-radius:8px; border:1px solid #e0d5da; margin-top:4px;">
             </div>
             <div class="acoes-modal">
-                <button class="btn-venc" onclick="AgnailsAdmin.salvarVencimento('${uid}')">Salvar vencimento</button>
+                <button class="btn-venc" onclick="AgnaylsAdmin.salvarVencimento('${uid}')">Salvar vencimento</button>
                 ${m.assinatura?.acessoLiberado
-                    ? `<button class="btn-bloquear" onclick="AgnailsAdmin.bloquearAcesso('${uid}')">Bloquear acesso</button>`
-                    : `<button class="btn-liberar" onclick="AgnailsAdmin.liberarAcesso('${uid}')">Liberar acesso</button>`}
+                    ? `<button class="btn-bloquear" onclick="AgnaylsAdmin.bloquearAcesso('${uid}')">Bloquear acesso</button>`
+                    : `<button class="btn-liberar" onclick="AgnaylsAdmin.liberarAcesso('${uid}')">Liberar acesso</button>`}
             </div>
         `;
         document.getElementById('overlayDetalheManicure').classList.add('show');
@@ -347,7 +347,7 @@
     document.getElementById('fecharDetalheManicure').addEventListener('click', () =>
         document.getElementById('overlayDetalheManicure').classList.remove('show'));
 
-    window.AgnailsAdmin.salvarVencimento = async function (uid) {
+    window.AgnaylsAdmin.salvarVencimento = async function (uid) {
         const valor = document.getElementById('inputNovoVencimento').value;
         if (!valor) { mostrarToast('Escolha uma data.', 'erro'); return; }
         const data = new Date(valor + 'T23:59:59');
@@ -359,7 +359,7 @@
         const vencimentoAnterior = manicureAlvo?.assinatura?.vencimento
             ? manicureAlvo.assinatura.vencimento.toDate().toISOString()
             : null;
-        await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
+        await Agnayls.manicureRef(uid).collection('meta').doc('assinatura').set({
             vencimento: firebase.firestore.Timestamp.fromDate(data),
             status: 'ativo',
             acessoLiberado: true
@@ -370,8 +370,8 @@
         recarregarPaginaAtualManicures();
     };
 
-    window.AgnailsAdmin.bloquearAcesso = async function (uid) {
-        await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
+    window.AgnaylsAdmin.bloquearAcesso = async function (uid) {
+        await Agnayls.manicureRef(uid).collection('meta').doc('assinatura').set({
             acessoLiberado: false, status: 'expirado'
         }, { merge: true });
         registrarLogAdmin('acesso_bloqueado', uid, {}); // [NOVO - A4]
@@ -380,7 +380,7 @@
         recarregarPaginaAtualManicures();
     };
 
-    window.AgnailsAdmin.liberarAcesso = async function (uid) {
+    window.AgnaylsAdmin.liberarAcesso = async function (uid) {
         // [CORRIGIDO] As regras do Firestore agora exigem que, para
         // status "ativo", o campo "vencimento" seja uma data futura (ver
         // assinaturaAtiva() em REGRAS_DE_SEGURANÇA.txt). Antes, este
@@ -393,7 +393,7 @@
         // data específica depois em "Salvar vencimento", se preferir.
         const novoVencimento = new Date();
         novoVencimento.setDate(novoVencimento.getDate() + 30);
-        await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
+        await Agnayls.manicureRef(uid).collection('meta').doc('assinatura').set({
             acessoLiberado: true, status: 'ativo',
             vencimento: firebase.firestore.Timestamp.fromDate(novoVencimento)
         }, { merge: true });
@@ -405,7 +405,7 @@
 
     /* ---------------- PAGAMENTOS PENDENTES ---------------- */
     async function carregarPagamentosPendentes() {
-        const pendentesSnap = await Agnails.db.collection('administracao').doc('pagamentosPendentes').collection('itens').get();
+        const pendentesSnap = await Agnayls.db.collection('administracao').doc('pagamentosPendentes').collection('itens').get();
         const container = document.getElementById('listaPagamentos');
 
         if (pendentesSnap.empty) {
@@ -417,14 +417,14 @@
         comprovantesPdfCache = {}; // reseta a cada carregamento da lista
         for (const item of pendentesSnap.docs) {
             const { uid, pagamentoId } = item.data();
-            const pagamentoSnap = await Agnails.manicureRef(uid).collection('pagamentos').doc(pagamentoId).get();
+            const pagamentoSnap = await Agnayls.manicureRef(uid).collection('pagamentos').doc(pagamentoId).get();
             if (!pagamentoSnap.exists) continue;
             const pagamento = pagamentoSnap.data();
             if (pagamento.status !== 'aguardando_aprovacao') continue;
 
-            const perfil = await Agnails.getPerfil(uid);
-            const nome = Agnails.escaparHTML(perfil?.nomeEmpresa || uid);
-            const competencia = Agnails.escaparHTML(pagamento.competencia || '');
+            const perfil = await Agnayls.getPerfil(uid);
+            const nome = Agnayls.escaparHTML(perfil?.nomeEmpresa || uid);
+            const competencia = Agnayls.escaparHTML(pagamento.competencia || '');
             // [ALTERADO] Comprovante agora pode ser imagem OU PDF —
             // alguns bancos só disponibilizam o comprovante nesse formato
             // (ver agnailProcessarComprovante em firebase-config.js e a
@@ -441,9 +441,9 @@
                 blocoComprovante = `<p style="color:var(--vermelho-escuro); font-size:0.82rem;">Comprovante inválido ou corrompido — peça um novo envio.</p>`;
             } else if (comprovanteEhPdf) {
                 comprovantesPdfCache[pagamentoId] = comprovanteSeguro;
-                blocoComprovante = `<button type="button" class="btn-abrir-pdf" onclick="AgnailsAdmin.abrirComprovantePdf('${pagamentoId}')"><i class="fa-solid fa-file-pdf"></i> Abrir comprovante (PDF)</button>`;
+                blocoComprovante = `<button type="button" class="btn-abrir-pdf" onclick="AgnaylsAdmin.abrirComprovantePdf('${pagamentoId}')"><i class="fa-solid fa-file-pdf"></i> Abrir comprovante (PDF)</button>`;
             } else {
-                blocoComprovante = `<img class="comprovante-img" src="${comprovanteSeguro}" onclick="AgnailsAdmin.ampliarComprovante(this.src)">`;
+                blocoComprovante = `<img class="comprovante-img" src="${comprovanteSeguro}" onclick="AgnaylsAdmin.ampliarComprovante(this.src)">`;
             }
 
             cartoes.push(`
@@ -456,8 +456,8 @@
                     ${blocoComprovante}
                     <textarea class="obs" id="obs-${pagamentoId}" placeholder="Observações (opcional)"></textarea>
                     <div class="acoes-pagamento">
-                        <button class="btn-aprovar" onclick="AgnailsAdmin.aprovarPagamento('${uid}','${pagamentoId}')">Aprovar</button>
-                        <button class="btn-rejeitar" onclick="AgnailsAdmin.rejeitarPagamento('${uid}','${pagamentoId}')">Rejeitar</button>
+                        <button class="btn-aprovar" onclick="AgnaylsAdmin.aprovarPagamento('${uid}','${pagamentoId}')">Aprovar</button>
+                        <button class="btn-rejeitar" onclick="AgnaylsAdmin.rejeitarPagamento('${uid}','${pagamentoId}')">Rejeitar</button>
                     </div>
                 </div>
             `);
@@ -465,7 +465,7 @@
         container.innerHTML = cartoes.length ? cartoes.join('') : '<div class="vazio">Nenhum pagamento aguardando aprovação.</div>';
     }
 
-    window.AgnailsAdmin.ampliarComprovante = function (src) {
+    window.AgnaylsAdmin.ampliarComprovante = function (src) {
         document.getElementById('imgComprovanteAmpliado').src = src;
         document.getElementById('overlayComprovanteAmpliado').classList.add('show');
     };
@@ -480,7 +480,7 @@
     // confiável de abrir/baixar conteúdo binário gerado no próprio
     // navegador. A URL do Blob é revogada depois de um tempo para não
     // vazar memória.
-    window.AgnailsAdmin.abrirComprovantePdf = function (pagamentoId) {
+    window.AgnaylsAdmin.abrirComprovantePdf = function (pagamentoId) {
         const base64 = comprovantesPdfCache[pagamentoId];
         if (!base64) {
             mostrarToast('Não foi possível abrir o comprovante. Atualize a lista e tente novamente.', 'erro');
@@ -501,7 +501,7 @@
         }
     };
 
-    window.AgnailsAdmin.aprovarPagamento = async function (uid, pagamentoId) {
+    window.AgnaylsAdmin.aprovarPagamento = async function (uid, pagamentoId) {
         const obs = document.getElementById('obs-' + pagamentoId)?.value || '';
         const agora = firebase.firestore.Timestamp.now();
 
@@ -512,7 +512,7 @@
         // assinatura dela, direto (uma leitura simples e barata).
         let vencimentoAtual = null;
         try {
-            const assinaturaSnap = await Agnails.manicureRef(uid).collection('meta').doc('assinatura').get();
+            const assinaturaSnap = await Agnayls.manicureRef(uid).collection('meta').doc('assinatura').get();
             if (assinaturaSnap.exists && assinaturaSnap.data().vencimento) {
                 vencimentoAtual = assinaturaSnap.data().vencimento.toDate();
             }
@@ -527,16 +527,16 @@
         const novoVencimento = new Date(baseData);
         novoVencimento.setDate(novoVencimento.getDate() + 30);
 
-        await Agnails.manicureRef(uid).collection('pagamentos').doc(pagamentoId).set({
+        await Agnayls.manicureRef(uid).collection('pagamentos').doc(pagamentoId).set({
             status: 'aprovado', observacoes: obs, aprovadoEm: agora, aprovadoPor: adminAtual.email
         }, { merge: true });
 
-        await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
+        await Agnayls.manicureRef(uid).collection('meta').doc('assinatura').set({
             status: 'ativo', acessoLiberado: true, ultimoPagamento: agora,
             vencimento: firebase.firestore.Timestamp.fromDate(novoVencimento)
         }, { merge: true });
 
-        await Agnails.db.collection('administracao').doc('pagamentosPendentes').collection('itens').doc(pagamentoId).delete();
+        await Agnayls.db.collection('administracao').doc('pagamentosPendentes').collection('itens').doc(pagamentoId).delete();
 
         registrarLogAdmin('pagamento_aprovado', uid, { // [NOVO - A4]
             pagamentoId,
@@ -549,15 +549,15 @@
         recarregarPaginaAtualManicures();
     };
 
-    window.AgnailsAdmin.rejeitarPagamento = async function (uid, pagamentoId) {
+    window.AgnaylsAdmin.rejeitarPagamento = async function (uid, pagamentoId) {
         const obs = document.getElementById('obs-' + pagamentoId)?.value || '';
-        await Agnails.manicureRef(uid).collection('pagamentos').doc(pagamentoId).set({
+        await Agnayls.manicureRef(uid).collection('pagamentos').doc(pagamentoId).set({
             status: 'rejeitado', observacoes: obs
         }, { merge: true });
-        await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
+        await Agnayls.manicureRef(uid).collection('meta').doc('assinatura').set({
             status: 'expirado', acessoLiberado: false
         }, { merge: true });
-        await Agnails.db.collection('administracao').doc('pagamentosPendentes').collection('itens').doc(pagamentoId).delete();
+        await Agnayls.db.collection('administracao').doc('pagamentosPendentes').collection('itens').doc(pagamentoId).delete();
 
         registrarLogAdmin('pagamento_rejeitado', uid, { pagamentoId, observacoes: obs }); // [NOVO - A4]
         mostrarToast('Pagamento rejeitado.', 'sucesso');
@@ -567,7 +567,7 @@
 
     /* ---------------- CONTAS PENDENTES DE EXCLUSÃO ---------------- */
     async function carregarContasExclusao() {
-        const snap = await Agnails.db.collection('administracao').doc('contasPendentesExclusao').collection('contas').get();
+        const snap = await Agnayls.db.collection('administracao').doc('contasPendentesExclusao').collection('contas').get();
         const container = document.getElementById('listaExclusoes');
 
         if (snap.empty) {
@@ -579,7 +579,7 @@
         for (const doc of snap.docs) {
             const dados = doc.data();
             const uid = doc.id;
-            const usuario = await Agnails.getUsuario(uid);
+            const usuario = await Agnayls.getUsuario(uid);
             if (!usuario) continue;
 
             // [CORRIGIDO - BAIXO: contas já reativadas continuavam
@@ -597,7 +597,7 @@
             // permissão) e não exibir uma conta que já foi restaurada
             // como se ainda estivesse pendente de exclusão.
             if (usuario.statusConta !== 'exclusao_solicitada') {
-                Agnails.db.collection('administracao').doc('contasPendentesExclusao')
+                Agnayls.db.collection('administracao').doc('contasPendentesExclusao')
                     .collection('contas').doc(uid).delete()
                     .catch((e) => console.error('Erro ao limpar ponteiro de exclusão órfão:', e));
                 continue;
@@ -608,37 +608,37 @@
 
             cartoes.push(`
                 <div class="exclusao-card">
-                    <div class="manicure-foto">${usuario.foto ? `<img src="${Agnails.escaparAtributo(usuario.foto)}">` : '<i class="fa-solid fa-user"></i>'}</div>
+                    <div class="manicure-foto">${usuario.foto ? `<img src="${Agnayls.escaparAtributo(usuario.foto)}">` : '<i class="fa-solid fa-user"></i>'}</div>
                     <div class="manicure-info">
-                        <div class="nome">${Agnails.escaparHTML(usuario.nome || '-')}</div>
-                        <div class="email">${Agnails.escaparHTML(usuario.email || '-')}</div>
+                        <div class="nome">${Agnayls.escaparHTML(usuario.nome || '-')}</div>
+                        <div class="email">${Agnayls.escaparHTML(usuario.email || '-')}</div>
                     </div>
                     <div class="manicure-meta">
                         <span>Solicitado em: <strong>${formatarData(dados.dataSolicitacaoExclusao)}</strong></span>
                         <span>Exclusão liberada em: <strong>${formatarData(dados.dataExclusaoPermitida)}</strong></span>
                         <span>Dias decorridos: <strong>${diasDecorridos}</strong></span>
                     </div>
-                    <button class="btn-reativar" onclick="AgnailsAdmin.reativarConta('${uid}')">Reativar Conta</button>
-                    <button class="btn-excluir-perm" ${disponivelHoje ? '' : 'disabled title="Ainda dentro do período de retenção de 90 dias"'} onclick="AgnailsAdmin.excluirPermanente('${uid}')">Excluir Permanentemente</button>
+                    <button class="btn-reativar" onclick="AgnaylsAdmin.reativarConta('${uid}')">Reativar Conta</button>
+                    <button class="btn-excluir-perm" ${disponivelHoje ? '' : 'disabled title="Ainda dentro do período de retenção de 90 dias"'} onclick="AgnaylsAdmin.excluirPermanente('${uid}')">Excluir Permanentemente</button>
                 </div>
             `);
         }
         container.innerHTML = cartoes.length ? cartoes.join('') : '<div class="vazio">Nenhuma conta pendente de exclusão.</div>';
     }
 
-    window.AgnailsAdmin.reativarConta = async function (uid) {
-        await Agnails.db.collection('usuarios').doc(uid).set({ statusConta: 'ativa' }, { merge: true });
-        await Agnails.manicureRef(uid).collection('meta').doc('assinatura').set({
+    window.AgnaylsAdmin.reativarConta = async function (uid) {
+        await Agnayls.db.collection('usuarios').doc(uid).set({ statusConta: 'ativa' }, { merge: true });
+        await Agnayls.manicureRef(uid).collection('meta').doc('assinatura').set({
             dataSolicitacaoExclusao: null, dataExclusaoPermitida: null
         }, { merge: true });
-        await Agnails.db.collection('administracao').doc('contasPendentesExclusao').collection('contas').doc(uid).delete();
+        await Agnayls.db.collection('administracao').doc('contasPendentesExclusao').collection('contas').doc(uid).delete();
         registrarLogAdmin('conta_reativada_pelo_admin', uid, {}); // [NOVO - A4]
         mostrarToast('Conta reativada!', 'sucesso');
         carregarContasExclusao();
         recarregarPaginaAtualManicures();
     };
 
-    window.AgnailsAdmin.excluirPermanente = async function (uid) {
+    window.AgnaylsAdmin.excluirPermanente = async function (uid) {
         if (!confirm('Esta ação é irreversível e removerá todos os dados desta manicure. Continuar?')) return;
         // [NOVO - A4] Guarda um resumo de identificação ANTES de
         // excluir — depois da exclusão não sobra nada para consultar, e
@@ -647,7 +647,7 @@
         // rara e irreversível).
         let resumoContaExcluida = { uid };
         try {
-            const usuarioSnap = await Agnails.db.collection('usuarios').doc(uid).get();
+            const usuarioSnap = await Agnayls.db.collection('usuarios').doc(uid).get();
             if (usuarioSnap.exists) {
                 resumoContaExcluida.email = usuarioSnap.data().email || null;
                 resumoContaExcluida.nome = usuarioSnap.data().nome || null;
@@ -656,7 +656,7 @@
             console.error('Erro ao buscar dados da conta antes da exclusão (log ficará incompleto):', e);
         }
         try {
-            await Agnails.excluirContaPermanentemente(uid);
+            await Agnayls.excluirContaPermanentemente(uid);
         } catch (e) {
             console.error('Erro ao excluir conta permanentemente:', e);
             mostrarToast('Erro ao excluir a conta. Tente novamente.', 'erro');
@@ -672,10 +672,10 @@
     function preencherFormConfig() {
         document.getElementById('cfgMensalidade').value = configSistemaCache.mensalidade;
         document.getElementById('cfgChavePix').value = configSistemaCache.chavePix;
-        document.getElementById('cfgWhatsapp').value = Agnails.mascararCelular(configSistemaCache.whatsappFinanceiro);
+        document.getElementById('cfgWhatsapp').value = Agnayls.mascararCelular(configSistemaCache.whatsappFinanceiro);
         document.getElementById('cfgDiasTeste').value = configSistemaCache.diasTeste;
     }
-    Agnails.aplicarMascaraCelular(document.getElementById('cfgWhatsapp'));
+    Agnayls.aplicarMascaraCelular(document.getElementById('cfgWhatsapp'));
 
     document.getElementById('formConfigSistema').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -685,7 +685,7 @@
             whatsappFinanceiro: document.getElementById('cfgWhatsapp').value.replace(/\D/g, ''),
             diasTeste: parseInt(document.getElementById('cfgDiasTeste').value) || 15
         };
-        await Agnails.setConfigSistema(novaConfig);
+        await Agnayls.setConfigSistema(novaConfig);
         configSistemaCache = { ...configSistemaCache, ...novaConfig };
         mostrarToast('Configurações salvas!', 'sucesso');
     });

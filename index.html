@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Agnails</title>
+<title>Agnayls</title>
 <link rel="icon" href="assets/logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,7 +26,7 @@
 </head>
 <body>
     <div class="logo"><i class="fa-solid fa-spa"></i></div>
-    <h1>Agnails</h1>
+    <h1>Agnayls</h1>
     <span class="spinner"></span>
     <p>Carregando...</p>
 
@@ -41,13 +41,13 @@
     // - Não logado -> login.html
     // - Logado como admin -> adm.html
     // - Logado como manicure -> manicures.html (se acesso liberado) ou cobranca.html
-    Agnails.onAuthChange(async function (user) {
+    Agnayls.onAuthChange(async function (user) {
         if (!user) {
             window.location.replace('login.html');
             return;
         }
         try {
-            const usuario = await Agnails.getUsuario(user.uid);
+            const usuario = await Agnayls.getUsuario(user.uid);
             if (!usuario) {
                 window.location.replace('login.html');
                 return;
@@ -56,8 +56,8 @@
                 window.location.replace('adm.html');
                 return;
             }
-            const assinatura = await Agnails.getAssinatura(user.uid);
-            const statusAcesso = Agnails.calcularStatusAcesso(assinatura);
+            const assinatura = await Agnayls.getAssinatura(user.uid);
+            const statusAcesso = Agnayls.calcularStatusAcesso(assinatura);
             window.location.replace(statusAcesso.acessoLiberado ? 'manicures.html' : 'cobranca.html');
         } catch (e) {
             console.error(e);
@@ -68,7 +68,7 @@
     // Se depois de um tempo razoável nada aconteceu (ex: Firebase lento),
     // evita deixar a pessoa presa na tela de carregamento.
     setTimeout(function () {
-        if (!Agnails.auth.currentUser) {
+        if (!Agnayls.auth.currentUser) {
             window.location.replace('login.html');
         }
     }, 4000);

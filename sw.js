@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Agnails - sw.js (v2)
+   Agnayls - sw.js (v2)
 
    Mudanças de segurança/robustez em relação à v1:
    - Lista de arquivos pré-cacheados atualizada para os nomes atuais do
