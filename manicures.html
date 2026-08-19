@@ -1285,13 +1285,12 @@
         // porque o listener é recriado a cada load da página. Como
         // "financeiro" só cresce (um doc por atendimento concluído), o
         // custo de cada login ia aumentando mês após mês. Substituído por
-        // uma busca única (não um listener), feita sob demanda só quando a
-        // aba Financeiro é aberta, e limitada ao ano corrente — ver
-        // carregarResumoFinanceiro(), na seção FINANCEIRO mais abaixo (essa
-        // função passou por uma segunda correção depois: o totalizador
-        // agregado que ela lia numa versão anterior deixava "Este Mês"/
-        // "Este Ano" incompletos para contas com histórico mais antigo;
-        // ver o comentário [CORRIGIDO] na própria função).
+        // um totalizador agregado (meta/resumoFinanceiro, mantido via
+        // FieldValue.increment em concluirAgendamento e corrigido com um
+        // backfill automático de uma vez por conta), lido sob demanda em
+        // carregarResumoFinanceiro(), só quando a aba Financeiro é aberta —
+        // ver essa função e executarBackfillResumoFinanceiro(), na seção
+        // FINANCEIRO mais abaixo.
 
         // Libera a tela (revela o painel principal)
         document.body.classList.remove('agnail-carregando');
@@ -1865,21 +1864,27 @@
                         observacoes: ag.observacoes,
                         dataRegistro: new Date().toISOString()
                     });
-                    // [REMOVIDO - CORREÇÃO: "Este Mês"/"Este Ano" zerados]
-                    // Havia aqui uma escrita extra num totalizador agregado
-                    // (meta/resumoFinanceiro, via FieldValue.increment()) que
-                    // os cards "Este Mês"/"Este Ano"/"Média Mensal" da aba
-                    // Financeiro passaram a ler. O problema: esse documento
-                    // só começava a ser alimentado a PARTIR do dia em que essa
-                    // versão entrou no ar — qualquer conta com histórico
-                    // anterior ficava com "Este Mês"/"Este Ano" mostrando só
-                    // uma fração (ou nada) do faturamento real, mesmo tendo
-                    // atendimentos concluídos naquele mês/ano, dando a
-                    // impressão de que só "Hoje" funcionava. Trocado por uma
-                    // busca direta e já limitada ao ano corrente em
-                    // carregarResumoFinanceiro() (ver aba FINANCEIRO abaixo) —
-                    // sempre correta, sem depender de nenhum totalizador
-                    // "pré-aquecido".
+                    // [CORRIGIDO - "Este Mês"/"Este Ano" zerados] Mantém, no
+                    // mesmo lote atômico, o totalizador agregado por ano e
+                    // por mês (meta/resumoFinanceiro) via
+                    // FieldValue.increment() — mesma ideia de antes, mas
+                    // agora combinada com um BACKFILL automático de uma vez
+                    // só por conta (ver executarBackfillResumoFinanceiro, na
+                    // aba FINANCEIRO mais abaixo), que recalcula esse
+                    // totalizador do zero a partir do histórico completo de
+                    // "financeiro" na primeira vez que a aba é aberta depois
+                    // desta versão. É o backfill que garante que contas com
+                    // atendimentos concluídos ANTES desta versão não fiquem
+                    // com "Este Mês"/"Este Ano" incompletos — a partir daí,
+                    // este incremento aqui é só o que mantém o totalizador
+                    // em dia a cada novo atendimento, sem precisar reler o
+                    // histórico inteiro de novo.
+                    const anoAg = ag.data.slice(0, 4);
+                    const mesAg = ag.data.slice(0, 7);
+                    batch.set(manicureRef.collection('meta').doc('resumoFinanceiro'), {
+                        ['porAno.' + anoAg]: firebase.firestore.FieldValue.increment(totalFinal),
+                        ['porMes.' + mesAg]: firebase.firestore.FieldValue.increment(totalFinal)
+                    }, { merge: true });
                     await batch.commit();
                 } catch (e) {
                     console.error('Erro ao concluir agendamento:', e);
@@ -1914,20 +1919,24 @@
         // (20 por vez, direto do Firestore, ordenada por data).
         //
         // [CORRIGIDO - "Este Mês"/"Este Ano" ficavam zerados] Os cards de
-        // resumo liam antes um documento agregado (meta/resumoFinanceiro),
-        // incrementado a cada atendimento concluído — mas esse documento só
-        // começava a existir/crescer a partir do dia em que aquela versão
-        // entrou no ar. Qualquer conta com atendimentos concluídos ANTES
-        // disso ficava com "Este Mês" e "Este Ano" mostrando um valor
-        // incompleto (ou R$ 0,00), mesmo tendo faturamento real no
-        // período — só "Hoje" (que sempre foi uma busca direta) continuava
-        // certo. Agora os quatro valores (Hoje/Este Mês/Este Ano/Média
-        // Mensal) vêm de UMA ÚNICA busca ao "financeiro", filtrada só pelo
-        // ANO CORRENTE (não a conta inteira), e somados aqui no cliente —
-        // sempre corretos, sem depender de nenhum totalizador "pré-aquecido"
-        // que pudesse estar desatualizado ou incompleto. O custo cresce no
-        // máximo com o volume de UM ano por vez que a aba é aberta, nunca
-        // com o histórico acumulado de todos os anos da conta.
+        // resumo leem o totalizador agregado (meta/resumoFinanceiro,
+        // incrementado a cada atendimento concluído — ver
+        // concluirAgendamento). O problema original era que esse documento
+        // só começava a existir/crescer a partir do dia em que aquela
+        // funcionalidade entrou no ar: contas com atendimentos concluídos
+        // ANTES disso ficavam com "Este Mês"/"Este Ano" incompletos (ou
+        // R$ 0,00), mesmo tendo faturamento real no período.
+        //
+        // A correção é um BACKFILL AUTOMÁTICO, feito uma única vez por
+        // conta (ver executarBackfillResumoFinanceiro logo abaixo): na
+        // primeira vez que esta aba é aberta e o totalizador ainda não tem
+        // a marca "backfillFeitoEm", o app lê TODOS os lançamentos já
+        // existentes em "financeiro" (uma leitura completa, mas só essa
+        // vez), recalcula porAno/porMes do zero e grava o resultado
+        // já com essa marca — nunca mais repete essa leitura completa.
+        // Dali em diante, cada novo atendimento concluído mantém o
+        // totalizador em dia sozinho, incrementando só o ano/mês daquele
+        // atendimento (custo praticamente constante, igual a antes).
         let paginadorFinanceiro = null;
 
         function construirQueryFinanceiro(filtroInicio, filtroFim) {
@@ -1937,32 +1946,63 @@
             return q.orderBy('data', 'desc');
         }
 
+        // [NOVO] Backfill de meta/resumoFinanceiro — lê a coleção
+        // "financeiro" INTEIRA desta conta (uma única vez, nunca de novo
+        // depois de concluída) e recalcula porAno/porMes a partir do
+        // histórico real, corrigindo contas que já tinham atendimentos
+        // concluídos antes deste totalizador existir. Grava o resultado
+        // com merge:true (preserva o próprio backfillFeitoEm e qualquer
+        // outro campo que não seja porAno/porMes) e retorna o documento já
+        // corrigido, para carregarResumoFinanceiro() usar na hora, sem
+        // precisar de uma segunda leitura.
+        async function executarBackfillResumoFinanceiro() {
+            const snap = await manicureRef.collection('financeiro').get();
+            const porAno = {};
+            const porMes = {};
+            snap.docs.forEach((d) => {
+                const dados = d.data();
+                const valor = dados.valor || 0;
+                const dataStr = dados.data || '';
+                const ano = dataStr.slice(0, 4);
+                const mes = dataStr.slice(0, 7);
+                if (ano) porAno[ano] = (porAno[ano] || 0) + valor;
+                if (mes) porMes[mes] = (porMes[mes] || 0) + valor;
+            });
+            const dadosResumo = {
+                porAno,
+                porMes,
+                backfillFeitoEm: firebase.firestore.Timestamp.now()
+            };
+            await manicureRef.collection('meta').doc('resumoFinanceiro').set(dadosResumo, { merge: true });
+            return dadosResumo;
+        }
+
         async function carregarResumoFinanceiro() {
             const agora = new Date();
             const anoAtual = String(agora.getFullYear());
             const hojeStr = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
             const mesAtualStr = hojeStr.slice(0, 7);
-            const inicioAnoStr = anoAtual + '-01-01';
             const numeroMesAtual = agora.getMonth() + 1;
 
             let totalAno = 0, totalMes = 0, totalHoje = 0;
             try {
-                // Uma única busca, limitada ao ano corrente (data entre o
-                // dia 1º de janeiro e hoje) — "Este Mês" e "Hoje" são
-                // subconjuntos desse mesmo resultado, filtrados aqui no
-                // cliente, sem precisar de buscas adicionais ao Firestore.
-                const anoSnap = await manicureRef.collection('financeiro')
-                    .where('data', '>=', inicioAnoStr)
-                    .where('data', '<=', hojeStr)
-                    .get();
+                const resumoSnap = await manicureRef.collection('meta').doc('resumoFinanceiro').get();
+                let resumo = resumoSnap.exists ? resumoSnap.data() : null;
 
-                anoSnap.docs.forEach((d) => {
-                    const dados = d.data();
-                    const valor = dados.valor || 0;
-                    totalAno += valor;
-                    if (dados.data >= mesAtualStr) totalMes += valor;
-                    if (dados.data === hojeStr) totalHoje += valor;
-                });
+                // Backfill automático, só na primeira vez (conta nova ou
+                // conta com histórico anterior a este totalizador).
+                if (!resumo || !resumo.backfillFeitoEm) {
+                    resumo = await executarBackfillResumoFinanceiro();
+                }
+
+                totalAno = (resumo.porAno && resumo.porAno[anoAtual]) || 0;
+                totalMes = (resumo.porMes && resumo.porMes[mesAtualStr]) || 0;
+
+                // "Hoje" continua vindo de uma busca direta e leve (poucos
+                // documentos, filtrada só pelo dia corrente) — não compensa
+                // manter um campo agregado por DIA só para este card.
+                const hojeSnap = await manicureRef.collection('financeiro').where('data', '==', hojeStr).get();
+                totalHoje = hojeSnap.docs.reduce((s, d) => s + (d.data().valor || 0), 0);
             } catch (e) {
                 console.error('Erro ao carregar resumo financeiro:', e);
             }

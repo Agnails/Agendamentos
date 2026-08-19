@@ -795,7 +795,7 @@ async function agnailEnviarComprovante(uid, file) {
    presente em manicures.html e agendamentos.html.
    ------------------------------------------------------------------------ */
 const AGNAIL_SUPORTE_EMAIL = 'tecminia@gmail.com';
-const AGNAIL_SUPORTE_INSTAGRAM_URL = 'https://instagram.com/agnails_saas';
+const AGNAIL_SUPORTE_INSTAGRAM_URL = 'https://instagram.com/agnayls';
 
 function agnailAbrirModalSuporte(aoFechar) {
   let overlay = document.getElementById('overlaySuporteAgnail');
@@ -811,7 +811,7 @@ function agnailAbrirModalSuporte(aoFechar) {
         <h2 style="font-family:'Playfair Display',serif; font-size:1.25rem; font-weight:500; margin-bottom:8px;">Precisa de ajuda?</h2>
         <p style="color:var(--texto-claro,#8a7a89); font-size:0.88rem; line-height:1.5; margin-bottom:18px;">Fale com a gente por e-mail para dúvidas e reclamações, ou veja tutoriais de como usar o Agnayls no nosso Instagram.</p>
         <a href="mailto:${AGNAIL_SUPORTE_EMAIL}" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; border-radius:var(--radius-sm,12px); background:var(--rosa-escuro,#c47d8f); color:#fff; text-decoration:none; font-weight:600; font-size:0.9rem; margin-bottom:10px;"><i class="fa-solid fa-envelope"></i> ${AGNAIL_SUPORTE_EMAIL}</a>
-        <a href="${AGNAIL_SUPORTE_INSTAGRAM_URL}" target="_blank" rel="noopener" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; border-radius:var(--radius-sm,12px); background:#fff; color:var(--rosa-escuro,#c47d8f); border:2px solid var(--rosa,#e4a5b8); text-decoration:none; font-weight:600; font-size:0.9rem;"><i class="fa-brands fa-instagram"></i> @agnails_saas no Instagram</a>
+        <a href="${AGNAIL_SUPORTE_INSTAGRAM_URL}" target="_blank" rel="noopener" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; border-radius:var(--radius-sm,12px); background:#fff; color:var(--rosa-escuro,#c47d8f); border:2px solid var(--rosa,#e4a5b8); text-decoration:none; font-weight:600; font-size:0.9rem;"><i class="fa-brands fa-instagram"></i> @agnayls no Instagram</a>
       </div>
     `;
     document.body.appendChild(overlay);

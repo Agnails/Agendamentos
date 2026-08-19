@@ -12,7 +12,7 @@
    com os dados fornecidos pela Tecminia.
    ========================================================================== */
 window.AGNAIL_TERMOS_HTML = `
-    <p style="font-size:0.78rem; color:var(--texto-claro);">Última atualização: 05 de agosto de 2026. Versão 2.1.</p>
+    <p style="font-size:0.78rem; color:var(--texto-claro);">Última atualização: 18 de agosto de 2026. Versão 2.2.</p>
 
     <h4>Termos de Uso</h4>
 
@@ -225,7 +225,7 @@ window.AGNAIL_TERMOS_HTML = `
     infraestrutura de nuvem), sempre limitados ao necessário e sob
     obrigações contratuais de confidencialidade.</p>
 
-    <p><strong>5. Armazenamento, Segurança, Backup e Incidentes</strong></p>
+    <p><strong>5. Armazenamento, Segurança e Incidentes</strong></p>
     <p>Os dados, incluindo imagens (fotos de perfil, logotipos e
     comprovantes de pagamento), são armazenados de forma estruturada no
     banco de dados Firestore, com compactação automática de imagens acima
@@ -236,12 +236,6 @@ window.AGNAIL_TERMOS_HTML = `
     dados contra acessos não autorizados, perda, alteração ou destruição
     indevida, ainda que nenhum sistema seja absolutamente imune a
     incidentes de segurança.</p>
-    <p>Realizamos backups periódicos dos dados armazenados na plataforma
-    para assegurar a continuidade do serviço e a possibilidade de
-    recuperação em caso de falhas ou incidentes. Os backups são
-    armazenados com os mesmos padrões de segurança e criptografia dos
-    dados originais e retidos pelo tempo estritamente necessário para as
-    finalidades de recuperação operacional.</p>
     <p>Em caso de incidente de segurança que possa acarretar risco ou dano
     relevante aos titulares de dados, o Agnayls comunicará os titulares
     afetados e a Autoridade Nacional de Proteção de Dados (ANPD), nos
